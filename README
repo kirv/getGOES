@@ -39,7 +39,7 @@ E.g.,
 
 The DataSite/GOES class directory itself contains a symlink to another
 class. The class hierarchy can be seen using the type method (one of a
-few built-in methods), e.g.:
+few built-in methods in tob), e.g.:
 
     $ tob fishck.type
     DataSite/GOES:Object:Directory
@@ -48,18 +48,18 @@ Executables from any linked class can be run as object methods. All
 available methods can be seen using the method method:
 
     $ tob fishck.method | column
-    help manual grep
-    initialize notes ls
-    query-dcp-server param method
-    validate-dcpid scan-arguments mkdir
-    _default set mv
-    _default-dict show rm
-    _default-dict-list usage rmdir
-    _dictionary xhtml show-envars
-    exists cat stat
-    get-prop echo touch
-    SUPER::help edit wc
-    html find
+    help                    manual                  grep
+    initialize              notes                   ls
+    query-dcp-server        param                   method
+    validate-dcpid          scan-arguments          mkdir
+    _default                set                     mv
+    _default-dict           show                    rm
+    _default-dict-list      usage                   rmdir
+    _dictionary             xhtml                   show-envars
+    exists                  cat                     stat
+    get-prop                echo                    touch
+    SUPER::help             edit                    wc
+    html                    find
 
 The tob program resolves the object and cd's into it before the method
 is invoked.  The contents of the object can be seen using ls:
@@ -72,7 +72,7 @@ is invoked.  The contents of the object can be seen using ls:
     drwxrwSr-x 2 ken site  4096 2009-11-04 16:08 query
     -rw-r--r-- 1 ken site   229 2009-11-04 21:53 @results
 
-The query results and a flat file accumulating all queries are prefixed
+The query results and a flat file accumulating all data are prefixed
 with the @ character in order to be treated as lists or arrays, e.g.,
 
     $ tob fishck.results            
@@ -115,7 +115,6 @@ as a "dictionary" or "tag = value" file.
     name = Fish Creek
 
 or,
-    
     $ tob fishck.config dcpid
     dcpid = 326AF6FE
 
@@ -129,6 +128,5 @@ A crontab entry to run a query could be:
 
     $  crontab -l | grep GOES
     53 * * * * /usr/local/bin/tob /home/site/GOES/fishck.query-dcp-server
-
 
 
