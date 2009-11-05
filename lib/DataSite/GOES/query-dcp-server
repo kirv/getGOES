@@ -4,14 +4,8 @@ hrs="$1"
 test -n "$hrs" ||
     hrs=1
 
-if test -e %config; then
-    configfile=%config
-elif test -e .%config; then
-    configfile=.%config
-else
-    echo config file not found >&2
-    exit 1
-fi
+test -e %config ||
+    exit 2
 
 unset dcpid name
 while IFS='=' read tag value; do
@@ -25,22 +19,14 @@ while IFS='=' read tag value; do
     fi
 done < $configfile
 
-
-echo name is $name
-echo platform dcpid is $dcpid
-
 tob ..validate-dcpid $dcpid ||
     exit 2
 
 w3m -dump "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hrs" \
     > @results
 
-declare -a loginfo
-
 lines=$(wc -l @results)
 lines=${lines% *}
-
-# echo $lines lines retrieved
 
 loginfo="id=$dcpid,lines=$lines"
 

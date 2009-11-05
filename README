@@ -11,14 +11,13 @@ the object for storing settings, data, history, etc.
 Example: create a site on the command line, query for data, output the
 data received:
 
-
     $ tob-new fishck DataSite/GOES
-    $ tob fishck.initialize dcpid 00000000
+    $ tob fishck.initialize dcpid 326AF6FE
     $ tob fishck.query-dcp-server
     $ tob fishck.cat @results
 
-
-The DataSite/GOES class is a directory in a defined thinobject library location. It can be accessed through a symlink in the object, e.g.:
+The DataSite/GOES class is a directory in a defined thinobject library
+location. It can be accessed through a symlink in the object, e.g.:
 
     $ tob fishck.ls -l .^/
     total 16
@@ -28,7 +27,8 @@ The DataSite/GOES class is a directory in a defined thinobject library location.
     -rwxrw-r-x 1 ken staff 1072 2009-11-04 16:40 query-dcp-server
     -rwxrw-r-x 1 ken staff 473 2009-11-04 15:27 validate-dcpid
 
-Each executable in the class directory can be run using the tob "enabler" program in the form:
+Each executable in the class directory can be run using the tob "enabler"
+program in the form:
 
     OBJECT.METHOD ARGUMENTS
 
@@ -37,12 +37,15 @@ E.g.,
     $ tob fishck.validate-dcpid badcode3
     non-hexadecimal character 3 in dcpid value: badcode3
 
-The DataSite/GOES class directory itself contains a symlink to another class. The class hierarchy can be seen using the type method (one of a few built-in methods), e.g.:
+The DataSite/GOES class directory itself contains a symlink to another
+class. The class hierarchy can be seen using the type method (one of a
+few built-in methods), e.g.:
 
     $ tob fishck.type
     DataSite/GOES:Object:Directory
 
-Executables from any linked class can be run as object methods. All available methods can be seen using the method method:
+Executables from any linked class can be run as object methods. All
+available methods can be seen using the method method:
 
     $ tob fishck.method | column
     help manual grep
@@ -57,5 +60,75 @@ Executables from any linked class can be run as object methods. All available me
     get-prop echo touch
     SUPER::help edit wc
     html find
+
+The tob program resolves the object and cd's into it before the method
+is invoked.  The contents of the object can be seen using ls:
+
+    $ tob fishck.ls -l
+    total 32
+    -rw-r--r-- 1 ken site 13856 2009-11-04 21:53 @alldata
+    -rw-rw-r-- 1 ken site    24 2009-11-04 16:29 %config
+    drwxrwSr-x 2 ken site  4096 2009-11-04 21:53 log
+    drwxrwSr-x 2 ken site  4096 2009-11-04 16:08 query
+    -rw-r--r-- 1 ken site   229 2009-11-04 21:53 @results
+
+The query results and a flat file accumulating all queries are prefixed
+with the @ character in order to be treated as lists or arrays, e.g.,
+
+    $ tob fishck.results            
+    EDDN Field Retrieval
+    
+    DCP: 326AF6FE From now minus 1 hours until now.
+    
+    326AF6FE09309074903G50+1NN038WXW00124
+    
+    hg 16.22 16.22 16.22 16.22
+    
+    tw -0.0
+    
+    h2 17.31 17.31 17.32 17.31
+    
+    t2 -2.3
+    
+    ta -11.1
+    
+    pc 6.87
+    
+    us 24.7
+    
+    ud 64
+    
+    VB 12.9
+
+or,
+    $ tob fishck.results 3,5,7  
+    DCP: 326AF6FE From now minus 1 hours until now.
+    326AF6FE09309074903G50+1NN038WXW00124
+    hg 16.22 16.22 16.22 16.22
+
+
+The config file is prefixed with the % character in order to be treated
+as a "dictionary" or "tag = value" file.
+
+    $ tob fishck.config
+    dcpid = 326AF6FE
+    name = Fish Creek
+
+or,
+    
+    $ tob fishck.config dcpid
+    dcpid = 326AF6FE
+
+The log and query directories are actually other objects, with their 
+own properties and methods.
+
+    $ tob fishck.log.type
+    TimeSeries:Object:Directory
+
+A crontab entry to run a query could be:
+
+    $  crontab -l | grep GOES
+    53 * * * * /usr/local/bin/tob /home/site/GOES/fishck.query-dcp-server
+
 
 
