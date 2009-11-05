@@ -1,0 +1,61 @@
+getGOES - manages data aquired from the NOAA GOES satellite system
+
+getGOES is implemented in the thinobject system, using ordinary
+directories, files, and executable programs. In fact, it is the first
+application implemented from scratch in the thinobject system.
+
+A thinobject class, DataSite/GOES, is defined and provides several methods
+to operate on and access each object. Several properties are defined in
+the object for storing settings, data, history, etc.
+
+Example: create a site on the command line, query for data, output the
+data received:
+
+
+    $ tob-new fishck DataSite/GOES
+    $ tob fishck.initialize dcpid 00000000
+    $ tob fishck.query-dcp-server
+    $ tob fishck.cat @results
+
+
+The DataSite/GOES class is a directory in a defined thinobject library location. It can be accessed through a symlink in the object, e.g.:
+
+    $ tob fishck.ls -l .^/
+    total 16
+    lrwxrwxrwx 1 ken staff 25 2009-11-04 16:15 ^ # /usr/local/lib/tob/Object
+    -rwxrw-r-x 1 ken staff 1048 2009-11-04 14:29 help
+    -rwxrw-r-x 1 ken staff 525 2009-11-04 16:29 initialize
+    -rwxrw-r-x 1 ken staff 1072 2009-11-04 16:40 query-dcp-server
+    -rwxrw-r-x 1 ken staff 473 2009-11-04 15:27 validate-dcpid
+
+Each executable in the class directory can be run using the tob "enabler" program in the form:
+
+    OBJECT.METHOD ARGUMENTS
+
+E.g.,
+
+    $ tob fishck.validate-dcpid badcode3
+    non-hexadecimal character 3 in dcpid value: badcode3
+
+The DataSite/GOES class directory itself contains a symlink to another class. The class hierarchy can be seen using the type method (one of a few built-in methods), e.g.:
+
+    $ tob fishck.type
+    DataSite/GOES:Object:Directory
+
+Executables from any linked class can be run as object methods. All available methods can be seen using the method method:
+
+    $ tob fishck.method | column
+    help manual grep
+    initialize notes ls
+    query-dcp-server param method
+    validate-dcpid scan-arguments mkdir
+    _default set mv
+    _default-dict show rm
+    _default-dict-list usage rmdir
+    _dictionary xhtml show-envars
+    exists cat stat
+    get-prop echo touch
+    SUPER::help edit wc
+    html find
+
+
