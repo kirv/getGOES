@@ -1,0 +1,59 @@
+#!/bin/sh
+
+hrs="$1"
+test -n "$hrs" ||
+    hrs=1
+
+if test -e %config; then
+    configfile=%config
+elif test -e .%config; then
+    configfile=.%config
+else
+    echo config file not found >&2
+    exit 1
+fi
+
+unset dcpid name
+while IFS='=' read tag value; do
+  # echo $tag $value
+    test -n "$tag" || continue
+    test ${tag:0:1} == '#' && continue
+    if test $tag == dcpid; then
+        dcpid=$value
+    elif test $tag == name; then
+        name=$value
+    fi
+done < $configfile
+
+
+echo name is $name
+echo platform dcpid is $dcpid
+
+tob ..validate-dcpid $dcpid ||
+    exit 2
+
+w3m -dump "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hrs" \
+    > @results
+
+declare -a loginfo
+
+lines=$(wc -l @results)
+lines=${lines% *}
+
+# echo $lines lines retrieved
+
+loginfo="id=$dcpid,lines=$lines"
+
+test -n "$USER" &&
+    loginfo="$loginfo,user=$USER"
+
+tob log.store $loginfo
+
+# tob query.store-stream < @results
+
+now=$(date --iso=seconds)
+
+# store a last-ditch flat file of log messages and results:
+echo \#query: $now,$loginfo >> @alldata
+cat @results >> @alldata
+

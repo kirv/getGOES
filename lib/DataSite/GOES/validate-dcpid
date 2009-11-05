@@ -1,0 +1,34 @@
+#!/bin/sh
+
+dcpid=$1 && shift
+
+warn () {
+    echo "$*" >&2
+    }
+
+test -n "$dcpid" ||
+    exit 1
+    
+unset bad
+
+test ${#dcpid} == 8 || {
+    warn "dcpid value has ${#dcpid} characters, should be 8: $dcpid"
+    bad=1
+    }
+
+i=0
+while test $i -lt 8; do
+  # echo $i
+    c=${dcpid:$i:1}
+    test "${c/[0-9a-fA-F]}" == "" ||
+        bad=2
+    i=$(($i+1))
+done
+
+test -n "$bad" && 
+    warn "non-hexadecimal character $c in dcpid value: $dcpid"
+
+test -z "$bad" ||
+    exit $bad
+
+

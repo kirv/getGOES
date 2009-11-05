@@ -1,0 +1,37 @@
+#!/bin/sh
+
+tob-new log TimeSeries ||
+    exit 1
+
+tob-new query TimeSeries ||
+    exit 2
+
+warn () {
+    echo "$*" >&2
+    }
+
+dcpid=00000000
+name="NO NAME"
+
+# read dcpid and name from tob-new command line...
+
+while test -n "$1"; do
+
+    tag=$1 && shift
+
+    if test $tag == dcpid; then
+        dcpid=$1 && shift
+
+    elif test $tag == name; then
+        name="$1" && shift
+
+    fi
+done
+
+tob ..validate-dcpid $dcpid ||
+    warn "dcpid value not validated: $dcpid"
+
+
+printf "%s=%s\n%s=%s\n" dcpid $dcpid name "$name" > %config
+
+

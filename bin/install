@@ -1,0 +1,71 @@
+#!/bin/sh
+
+host=""
+
+while test -n "$1"; do
+    arg=$1 &&
+        shift
+
+    test ${arg:0:1} == '-' && { # parse arguments
+        if test $arg == '--prefix'; then
+            prefix=$1 &&
+                shift
+        elif test $arg == '--host'; then
+            host=$1: &&
+                shift
+        elif test $arg == '-h'; then
+            echo SYNOPSIS bin/install [--prefix PATH] [--host [USER@]HOST] [--help] [-h]
+            exit 0
+        elif test $arg == '--help'; then
+            awk '/^NAME/{ok=1}ok{print}' $0
+            exit 0
+        else
+            echo unknown argument: $arg
+            exit 1
+        fi
+        }
+done
+
+test -n "$prefix" ||
+    prefix=/usr/local
+
+rsync -azv --exclude-from=bin/.install-exclude lib/ $host$prefix/lib/tob
+
+exit
+
+NAME
+    bin/install -- install thinobject code for DataSite/GOES system
+
+SYNOPSIS
+    bin/install [--prefix PATH] [--host [USER@]HOST] [--help] [-h] 
+
+DESCRIPTION
+    Installs or updates an existing installation from the sh, perl,
+    and lib directories.
+
+    Binaries are installed in $prefix/bin, thinobject class libraries
+    in $prefix/lib/tob, and perl modules in $prefix/lib/site_perl.
+
+    The rsync utility is used to only copy files if newer than existing
+    ones.
+
+OPTIONS
+    --prefix PATH
+    Install path prefix, defaults to /usr/local.
+    
+    --host HOSTNAME
+    --host USER@HOSTNAME
+    Any host specifier valid for rsync(1) or ssh(1).  Colon separator is
+    appended automatically.  Defaults to "" to install on local host.
+    
+    -h
+    --help
+    Short or long help messages.
+
+
+BUGS
+    The --host option is not yet tested, so is disabled.
+
+AUTHOR
+    Ken Irving <fnkci@uaf.edu> 2009
+

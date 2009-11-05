@@ -1,0 +1,15 @@
+To install this thinobject system locally or on a remote host, run bin/install.
+
+Examples:
+
+  $ bin/install -h
+  $ bin/install --help
+  # bin/install --prefix /usr/lib
+  $ bin/install --prefix ~
+  $ bin/install --prefix ~ --host me@some.host
+  $ bin/install
+
+The last example is the same as:
+
+  $ bin/install --prefix /usr/local
+

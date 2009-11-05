@@ -1,0 +1,39 @@
+#!/bin/sh
+
+cat << END_HELP_SCREEN
+NAME
+    DataSite/GOES -- thinobject class representing a GOES data platform
+
+DESCRIPTION
+    The GOES NOAA DCS platform ID is stored in the object, and used to
+    retrieve data from a network-connected server.  Results are stored
+    in the object and accessed by various methods.
+
+    Initially, queries will be run periodically and stored, but will
+    not be parsed or interpreted.  Later, data will be fully processed
+    and made available from this system, and probably also pushed up to
+    other database systems.
+
+METHODS
+    init -- create log, query, and other contained objects
+    query-dcp-server -- get data for the platform
+    help   -- display this help screen
+
+PROPERTIES
+    %config -- settings file
+    @results -- output from last query
+    
+OBJECTS
+    log -- timeseries object for query log messages
+    query -- store timestamped results of each query 
+    
+
+SEE ALSO
+
+BUGS
+
+AUTHOR
+    Ken Irving <fnkci@uaf.edu> (c) 2009
+
+    Licensed under the GPL (Gnu Public Library)
+END_HELP_SCREEN
