@@ -17,7 +17,7 @@ while IFS='=' read tag value; do
     elif test $tag == name; then
         name=$value
     fi
-done < $configfile
+done < %config
 
 tob ..validate-dcpid $dcpid ||
     exit 2
@@ -35,7 +35,7 @@ test -n "$USER" &&
 
 tob log.store $loginfo
 
-# tob query.store-stream < @results
+tob query.store < @results
 
 now=$(date --iso=seconds)
 

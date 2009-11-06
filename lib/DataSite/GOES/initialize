@@ -6,6 +6,9 @@ tob-new log TimeSeries ||
 tob-new query TimeSeries ||
     exit 2
 
+tob-new dcpheader TimeSeries ||
+    exit 2
+
 warn () {
     echo "$*" >&2
     }

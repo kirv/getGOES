@@ -1,0 +1,136 @@
+USGS - science for a changing world
+
+NOAA GOES DCS
+EROS USGS
+STIWG
+
+Emergency Data Distribution Network
+
+* EDDN Home     
+
+                            * DCP Message Format *
+
+Each DCP message will have header fields followed by a message body. Regardless
+of which interface a DCP message was received from, the LRGS internally formats
+the header into a 37- byte character string with the following fields:
+
+  * 8 hex digit DCP Address
+  * YYDDDHHMMSS ? Time the message arrived at the Wallops receive station. The
+    day is represented as a three digit day of the year (julian day).
+  * 1 character failure code
+  * 2 decimal digit signal strength
+  * 2 decimal digit frequency offset
+  * 1 character modulation index
+  * 1 character data quality indicator
+  * 3 decimal digit GOES receive channel
+  * 1 character GOES spacecraft indicator (?E? or ?W?)
+  * 2 character data source code Data Source Code Table
+  * 5 decimal digit message data length
+
+Following the header will be the message body, with a variable number of
+characters. The format of the message body varies widely depending on the
+manufacturer of the transmitter, data logger, sensors, and the technician who
+programmed the DCP. The body can be simple ASCII, sometime with parameter codes
+and time-stamps embedded, sometimes not. The body can also be in
+?Pseudo-Binary? which is character encoding of binary data that uses 6 bits of
+every byte and guarantees that all characters are printable.
+
+Failure Code
+
+The single character labeled 'Failure Code' in the DCP message header indicates
+whether the message originated from a DCP or whether it is a DAPS-generated
+status message. Real DCP messages have a failure code of 'G' for good message,
+or '?' if the message contained parity errors when received by DAPS.
+
+If the failure code is anything other than '?' or 'G', the message is generated
+by DAPS. These status messages have the DCP address of the pertinent platform
+and are typically sent immediately after the real DCP message from that
+platform. The body of the message will be a brief text message explaining the
+event.
+
+Possible failure codes are as follows:
+
+    Real DCP Messages:
+
+        +----------------------------------+
+        |Code|         Description         |
+        |----+-----------------------------|
+        | G  |Good DCP Message             |
+        |----+-----------------------------|
+        | ?  |DCP Message with Parity Error|
+        +----------------------------------+
+
+    DAPS Status Messages:
+
+        +---------------------------------------------------------------------+
+        |Code|                          Description                           |
+        |----+----------------------------------------------------------------|
+        |----+----------------------------------------------------------------|
+        | W  |Previous DCP message was Received on the wrong channel          |
+        |----+----------------------------------------------------------------|
+        | D  |Previous DCP message was duplicated (i.e. received on multiple  |
+        |    |channels)                                                       |
+        |----+----------------------------------------------------------------|
+        | A  |Previous DCP message contained a correctable address error      |
+        |----+----------------------------------------------------------------|
+        | B  |Previous DCP message contained a bad (unknown) address          |
+        |----+----------------------------------------------------------------|
+        | T  |Previous DCP message was received outside its proper time slice |
+        |    |(early/late)                                                    |
+        |----+----------------------------------------------------------------|
+        | U  |Previous DCP message was unexpected                             |
+        |----+----------------------------------------------------------------|
+        | M  |The DCP message for the referenced platform was missing (not    |
+        |    |received in its proper time slice)                              |
+        |----+----------------------------------------------------------------|
+        | I  |Previous DCP message had an invalid adÂ­dress                   |
+        |----+----------------------------------------------------------------|
+        | N  |The referenced platform has a non?complete entry in the DAPS    |
+        |    |Platform Description Table (PDT)                                |
+        |----+----------------------------------------------------------------|
+        | Q  |Previous DCP message had bad quality measurements               |
+        +---------------------------------------------------------------------+
+
+Signal Strength
+
+Signal Strength will be two ASCII digits and will be in the range of 32 to 57.
+Signal strength is the implied EIRP, assuming the pilot is a +47 dBm reference.
+
+Frequency Offset
+
+Frequency Offset will be two ASCII characters. The first will be a plus or
+minus sign. The second will be on ASCII digit 0 through9, or the capital letter
+'A'. The sign indicates that the DCP is transmitting above or below (plus or
+minus, respectively) the channel center frequency. The digit indicates the
+amount of the offset in increments of 50 Hz. The character 'A' represents
+500Hz, which is the worst case frequency error that DAPS can acquire.
+
+Modulation Index
+
+Modulation Index will be one of the following three characters:
+
+NNormal: (60° ± 5°)
+
+L Low: ( 50° )
+
+H High: ( 70° )
+
+Data Quality
+
+Data Quality will be one of the following three characters:
+
+NNormal: Error rate better than 10^-6
+
+F Fair: Error rate between 10^-4 and 10^-6
+
+P Poor: Error rate worse than 10^-4
+
+
+       Emergency Data Distribution Network (EDDN) U.S. Geological Survey
+
+U.S. Geological Survey Site
+URL: http://eddn.usgs.gov/dcpformat.html
+Page Contact Information: EDDN Team
+Page Last Modified: Tuesday, 24-Jun-2008 11:57:28 CDT
+Privacy Statement || Disclaimer
+
