@@ -25,9 +25,6 @@ PROPERTIES
     @alldata -- append query-log message and @results from each query
 
 ATTRIBUTES
-    .data-order-15min=right-to-left --
-        interpret 15-minute data in hourly messages as written from right
-        to left, i.e., so that the newest data is on the left
     
 OBJECTS
     query-log (TimeSeries)
