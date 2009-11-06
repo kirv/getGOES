@@ -22,11 +22,30 @@ METHODS
 PROPERTIES
     %config -- settings file
     @results -- output from last query
+    @alldata -- append query-log message and @results from each query
+
+ATTRIBUTES
+    .data-order-15min=right-to-left --
+        interpret 15-minute data in hourly messages as written from right
+        to left, i.e., so that the newest data is on the left
     
 OBJECTS
-    log -- timeseries object for query log messages
-    query -- store timestamped results of each query 
+    query-log (TimeSeries)
+        log time of query, platform ID, amount of data received
+
+    query-blob (TimeSeries)  
+        store data received in each query 
+
+    dcp-header (TimeSeries)
+        store transport data from DCP message headers
+
+    process-dcp-log (TimeSeries)
+        log results of processing and storing raw data
     
+    rawdata (Aggregate)
+        contains timeseries objects for each sensor/variable in incoming
+        data messages
+
 
 SEE ALSO
 
@@ -34,6 +53,5 @@ BUGS
 
 AUTHOR
     Ken Irving <fnkci@uaf.edu> (c) 2009
-
-    Licensed under the GPL (Gnu Public Library)
+    Licensed under GPL3 GNU Public License
 END_HELP_SCREEN

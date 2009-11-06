@@ -1,12 +1,12 @@
 #!/bin/sh
 
-tob-new log TimeSeries ||
-    exit 1
+# create objects inside the GOES data site object
+for ob in query-log query-blob dcp-msg process-dcp-log; do 
+    tob-new $ob TimeSeries ||
+        exit 2
+done
 
-tob-new query TimeSeries ||
-    exit 2
-
-tob-new dcpheader TimeSeries ||
+tob-new rawdata Aggregate ||
     exit 2
 
 warn () {
@@ -36,5 +36,10 @@ tob ..validate-dcpid $dcpid ||
 
 
 printf "%s=%s\n%s=%s\n" dcpid $dcpid name "$name" > %config
+
+## NOTE: this attribute is for a particular site configuration!
+## ... we should move it out of this general-purpose method ...
+
+touch ".data-order-15min=right-to-left"
 
 

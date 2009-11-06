@@ -33,9 +33,9 @@ loginfo="id=$dcpid,lines=$lines"
 test -n "$USER" &&
     loginfo="$loginfo,user=$USER"
 
-tob log.store $loginfo
+tob query-log.store $loginfo
 
-tob query.store < @results
+tob query-blob.store < @results
 
 now=$(date --iso=seconds)
 

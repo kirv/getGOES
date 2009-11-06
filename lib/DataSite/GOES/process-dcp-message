@@ -108,10 +108,33 @@ sub store_header { # ... but omit time fields
     my $ref = shift;
     my @fields = @$ref;
     my $epoch = calculate_epoch($t);
-    my $command = "dcpheader.store --tzofs=0000 --time=$epoch " .
+    my $command = "dcp-header.store --tzofs=0000 --time=$epoch " .
         join(',', @fields[0,6,7,8,9,10,11,12,13,14]);
     print "tob $command\n";
     system("tob $command");
+    }
+
+sub store_datum { # assumes hourly data!
+    my $t = shift;
+    my $tag = shift;
+    my @value = @_;
+    my $interval = 3600 / scalar @value;
+    @value = reverse @value if
+        scalar @value > 1 && -e '.data-order-15min=right-to-left';
+    while ( @value ) {
+        my $val = shift @value;
+        my $command = join ' ', 
+            "tob",
+            "rawdata/$tag.store",
+            "--tzofs=0000",
+            "--time=$t",
+            "--interval=$interval",
+            "--",
+            "$val";
+        print $command, "\n";
+        system($command);
+        $t += $interval;  # advance time to next interval
+        }
     }
 
 sub store_data {
@@ -120,7 +143,10 @@ sub store_data {
     my $ref = shift;
     my $epoch = calculate_epoch($t);
     my $datatime = $epoch - $backup2hour;
-    my @entries = @$ref;
-    print join("\n", @entries), "\n";
+    foreach ( @$ref ) {
+        my ($tag, @value) = split / /, $_;
+        store_datum( $datatime, $tag, @value);
+        }
+  # print join("\n", @entries), "\n";
     }
 
