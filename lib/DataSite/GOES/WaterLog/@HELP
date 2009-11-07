@@ -1,0 +1,8 @@
+NAME
+    DataSite/GOES/WaterLog -- GOES data platform using a WaterLog datalogger
+
+ATTRIBUTES
+    .data-order-15min=right-to-left --
+        interpret 15-minute data in hourly messages as written from right
+        to left, i.e., so that the newest data is on the left
+    

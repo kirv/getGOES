@@ -1,6 +1,3 @@
-#!/bin/sh
-
-cat << END_HELP_SCREEN
 NAME
     DataSite/GOES -- thinobject class representing a GOES data platform
 
@@ -43,12 +40,7 @@ OBJECTS
         contains timeseries objects for each sensor/variable in incoming
         data messages
 
-
-SEE ALSO
-
-BUGS
-
 AUTHOR
     Ken Irving <fnkci@uaf.edu> (c) 2009
     Licensed under GPL3 GNU Public License
-END_HELP_SCREEN
+
