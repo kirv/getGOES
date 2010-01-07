@@ -1,0 +1,186 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+use Time::Local qw(timegm);
+
+my @tags = qw(
+    address year day hour minute second failcode
+    qsignalstrength qfreqofs qmodulation qdata
+    channel spacecraft uplink
+    datalen
+    );
+
+my $dcpid;
+# read platform ID from %config file:
+open CONFIG, '<', '%config' or die "no config file found\n";
+while ( <CONFIG> ) {
+    chomp;
+    $dcpid = $1 if m/dcpid\s*=\s*([0-9A-Fa-f]{8})$/;
+    }
+close CONFIG or die "failed to close config file \%config\n";
+
+die "no GOES DCP platform id defined for object\n"
+    unless $dcpid;
+
+my %dcpmsg;
+ 
+my $msgbytes;
+my $timestamp;
+my @data;
+
+my $source = shift;
+if ( defined $source ) {
+    open STDIN, '<', $source
+        or die "unable to open $source file in object\n";
+    }
+else {
+    open STDIN, '<', '@results'
+        or die "unable to open \@results file in object\n";
+    }
+
+# read DCP message(s) on standard input:
+while ( my $line = <> ) {
+    chomp $line;
+    if ( $msgbytes && $msgbytes > 0 ) {
+        my $len = length($line);
+        printf "%3d %2d : %s\n", $msgbytes, $len, $line;
+      # next if $len == 0;
+        if ( $len == 0 ) {
+          # print "<blank>\n($msgbytes)\n";
+            next;
+            }
+      # print "$line\n";
+        push @data, $line;
+        $msgbytes -= $len;
+        $msgbytes -= 3  # endings of non-blank lines account for 3 bytes...?
+            unless $msgbytes == 0;
+      # print "($msgbytes)\n";
+        next;
+        }
+
+    if ( @data ) {
+      # print "data:<", join("\n", @data), ">\n\n";
+        printf "%3d -- .\n", $msgbytes;
+        $dcpmsg{$timestamp}->[1] = [ @data ];
+        @data = ();
+        }
+
+    next unless $line =~ m/^$dcpid/;
+    my @fields;
+    ($timestamp, @fields) = parse_header($line);
+    $msgbytes = $fields[14];
+    my $data = pop @fields;
+
+  # print "$timestamp, @fields\n";
+  # print "($msgbytes)\n";
+
+    if ( $data ) {
+        push @data, $data;
+        printf "%3d %2d ! %s\n", $msgbytes, length($data), $data;
+        $msgbytes -= length($data);
+      # print "$data\n";
+      # print "($msgbytes)\n";
+        }
+
+    $dcpmsg{$timestamp}->[0] = \@fields;
+
+    }
+
+foreach my $t ( sort keys %dcpmsg ) {
+  # printf "%s %s %s\n", $t, $dcpmsg{$t}->[0,1];
+    store_header($t, $dcpmsg{$t}->[0]);
+    my ($m, $s) = ($dcpmsg{$t}->[0]->[4], $dcpmsg{$t}->[0]->[5]);
+    my $backup2hour = $m * 60 + $s;
+  # print "$m $s $backup2hour\n";
+  # print "\t", $dcpmsg{$t}->[1], "\n";
+  # store_data($t, $backup2hour, $dcpmsg{$t}->[1]);
+    }
+
+exit 0;
+
+sub parse_header { 
+    my $header = shift; 
+    my @h = $header =~ m/
+        (.{8}) #  0 + ADDRESS 8 DCP address 
+        (..)   #  1 - YEAR 2 Year message was received
+        (...)  #  2 - DOY 3 Day of year message received
+        (..)   #  3 - HOUR 2 Hour message was received
+        (..)   #  4 - MINUTE 2 Minute message was received
+        (..)   #  5 - SECOND 2 Second message was received
+        (.)    #  6 + FAILURE_CODE 1 Code for message (see Notes)
+        (..)   #  7 + SIGNAL_STRENGTH 2 DAMS quality measurement
+        (..)   #  8 + FREQUENCY_OFFSET 2 DAMS quality measurement
+        (.)    #  9 + MODULATION_INDEX 1 DAMS quality measurement
+        (.)    # 10 + DATA_QUALITY 1 DAMS quality measurement
+        (...)  # 11 + CHANNEL_RECEIVED 3 Channel message received on
+        (.)    # 12 + GOES_SPACECRAFT 1 GOES spacecraft used
+        (..)   # 13 + UPLINK_CARRIER_STATUS 2 Uplink carrier status
+        (.{5}) # 14 + MESSAGE_DATA_LENGTH 5 Message length (bytes) (see Notes)
+        (.*)   # 15 + POSSIBLE DATA AFTER HEADERS
+        /x;
+    warn("ERROR PARSING HEADER:$header") && 
+        return("ERROR PARSING HEADER:$header") unless @h;
+
+    # timestamp format:       YY DDD / HH : MM : SS
+    my $year = $h[1] < 70 ? 2000 + $h[1] : 1900 + $h[1];
+    my $timestamp = sprintf "%04d-%03dT%02d:%02d:%02dZ", 
+        $year, $h[2], $h[3], $h[4], $h[5];
+
+    # return the timestamp and the 15 header fields, plus possible data
+    return $timestamp, @h;
+    }
+
+sub calculate_epoch { # convert iso8601 format to seconds since epoch
+    my $t = shift;
+    my ($y,$d,$h,$m,$s) = $t =~ m/^(\d{4})-(\d+)T(\d\d):(\d\d):(\d\d)Z/;
+    return timegm(0,0,0,1,0,$y) + ($d-1)*3600*24 + $h*3600 + $m*60 + $s;
+    }
+
+sub store_header { # ... but omit time fields
+    my $t = shift;
+    my $ref = shift;
+    my @fields = @$ref;
+    my $epoch = calculate_epoch($t);
+    my $command = "dcp-header.store --tzofs=0000 --time=$epoch " .
+        join(',', @fields[0,6,7,8,9,10,11,12,13,14]);
+    print "tob $command\n";
+  # system("tob $command");
+    }
+
+sub store_data {
+    my $t = shift;
+    my $backup2hour = shift;
+    my $ref = shift;
+    my $epoch = calculate_epoch($t);
+    my $datatime = $epoch - $backup2hour;
+  # foreach ( @$ref ) {
+  #     my ($tag, @value) = split / /, $_;
+  #     print "store_datum( $datatime, $tag, @value)\n";
+  #     }
+  # print join("\n", @entries), "\n";
+    print join("\n", @$ref), "\n";
+    }
+
+sub store_datum { # assumes hourly data!
+    my $t = shift;
+    my $tag = shift;
+    my @value = @_;
+    my $interval = 3600 / scalar @value;
+    @value = reverse @value if
+        scalar @value > 1 && -e '.data-order-15min=right-to-left';
+    while ( @value ) {
+        my $val = shift @value;
+        my $command = join ' ', 
+            "tob",
+            "rawdata/$tag.store",
+            "--tzofs=0000",
+            "--time=$t",
+            "--interval=$interval",
+            "--",
+            "$val";
+        print $command, "\n";
+      # system($command);
+        $t += $interval;  # advance time to next interval
+        }
+    }
+
