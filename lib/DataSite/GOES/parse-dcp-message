@@ -22,84 +22,51 @@ close CONFIG or die "failed to close config file \%config\n";
 die "no GOES DCP platform id defined for object\n"
     unless $dcpid;
 
-my %dcpmsg;
- 
-my $msgbytes;
-my $timestamp;
-my @data;
-
 my $source = shift;
 $source = '@results' unless defined $source;
 open STDIN, '<', $source
     or die "unable to open $source file in object\n";
 
+my %hdr;
+my %msg;
+ 
+my $iso8601_time;
+my $count;
+my $message;
+
 # read DCP message(s) on standard input:
-while ( my $line = <> ) {
-    chomp $line;
-    if ( $msgbytes && $msgbytes > 0 ) {
-        my $len = length($line);
-        printf "%3d %2d : %s\n", $msgbytes, $len, $line;
-      # next if $len == 0;
-        if ( $len == 0 ) {
-          # print "<blank>\n($msgbytes)\n";
-            $msgbytes -= 1; # account for linefeed
+while ( <> ) {
+    chomp;
+    if ( m/^$dcpid/ ) { # expect this to be a DCP message header
+        # store previous message
+        $msg{$iso8601_time} = $message if $message;
+        undef $message;
+        undef $count;
+        my @fields;
+        ($iso8601_time, @fields) = parse_header($_);
+        unless ( $fields[6] eq 'G' ) {
+            exit 1 if $source eq '@results';
+            warn "skipping not-good message with status $fields[6]\n";
             next;
             }
-      # print "$line\n";
-        push @data, $line;
-        $msgbytes -= $len + 1; # account for linefeed
-      # print "($msgbytes)\n";
-        next unless $msgbytes <= 0;
-        }
-
-    if ( @data ) {
-      # print "data:<", join("\n", @data), ">\n\n";
-        printf "%3d -- .\n", $msgbytes;
-        $dcpmsg{$timestamp}->[1] = [ @data ];
-        @data = ();
-        }
-
-    next unless $line =~ m/^$dcpid/;
-    my @fields;
-    ($timestamp, @fields) = parse_header($line);
-    unless ( $fields[6] eq 'G' ) {
-        exit 1 if $source eq '@results';
-        warn "skipping not-good message\n";
+        $count = $fields[14];
+        $message = pop(@fields) . "\n";
+        $count -= length $message;
+        $hdr{$iso8601_time} = [ @fields, substr($_, 0, 37) ];
         next;
         }
-    $msgbytes = $fields[14];
-    # adjust message length per note (4) at:
-    # http://dcs.noaa.gov/dapsuser.htm#APPENDIX D:  DOWNLOADED DCP MESSAGE FORMAT
-    # to account for missing 4-byte binary DCP address
-    $msgbytes -= 4;
-
-    my $data = pop @fields;
-
-  # print "$timestamp, @fields\n";
-  # print "($msgbytes)\n";
-
-    if ( $data ) {
-        push @data, $data;
-        printf "%3d %2d ! %s\n", $msgbytes, length($data), $data;
-        $msgbytes -= length($data);
-      # print "$data\n";
-      # print "($msgbytes)\n";
-        }
-    # 1 byte for line feed following header line + optional data:
-    $msgbytes -= 1;
-
-    $dcpmsg{$timestamp}->[0] = \@fields;
-
+    next unless $count;
+    $message .= $_ . "\n";
+    $count -= length($_) + 1;
+    undef $count if $count <= 0;
     }
 
-foreach my $t ( sort keys %dcpmsg ) {
-  # printf "%s %s %s\n", $t, $dcpmsg{$t}->[0,1];
-    store_header($t, $dcpmsg{$t}->[0]);
-    my ($m, $s) = ($dcpmsg{$t}->[0]->[4], $dcpmsg{$t}->[0]->[5]);
-    my $backup2hour = $m * 60 + $s;
-  # print "$m $s $backup2hour\n";
-  # print "\t", $dcpmsg{$t}->[1], "\n";
-  # store_data($t, $backup2hour, $dcpmsg{$t}->[1]);
+foreach my $t ( sort keys %msg ) {
+    print "$t\n";
+  # my $epoch = store_header($t);
+  # my ($m, $s) = ($hdr{$t}->[4,5]);
+  # my $backup_to_hour = $m * 60 + $s;
+  # store_message($t, $backup_to_hour, $epoch);
     }
 
 exit 0;
@@ -129,11 +96,11 @@ sub parse_header {
 
     # timestamp format:       YY DDD / HH : MM : SS
     my $year = $h[1] < 70 ? 2000 + $h[1] : 1900 + $h[1];
-    my $timestamp = sprintf "%04d-%03dT%02d:%02d:%02dZ", 
+    my $iso8601_time = sprintf "%04d-%03dT%02d:%02d:%02dZ", 
         $year, $h[2], $h[3], $h[4], $h[5];
 
     # return the timestamp and the 15 header fields, plus possible data
-    return $timestamp, @h;
+    return $iso8601_time, @h;
     }
 
 sub calculate_epoch { # convert iso8601 format to seconds since epoch
@@ -142,29 +109,30 @@ sub calculate_epoch { # convert iso8601 format to seconds since epoch
     return timegm(0,0,0,1,0,$y) + ($d-1)*3600*24 + $h*3600 + $m*60 + $s;
     }
 
-sub store_header { # ... but omit time fields
+sub store_header {
     my $t = shift;
-    my $ref = shift;
-    my @fields = @$ref;
+    my @fields = $hdr{$t}->[0..14];
     my $epoch = calculate_epoch($t);
     my $command = "dcp-header.store --tzofs=0000 --time=$epoch " .
-        join(',', @fields[0,6,7,8,9,10,11,12,13,14]);
+        join(',', $hdr{$t}->[0..14]);
     print "tob $command\n";
   # system("tob $command");
+    return $epoch;
     }
 
-sub store_data {
+sub store_message {
     my $t = shift;
-    my $backup2hour = shift;
-    my $ref = shift;
-    my $epoch = calculate_epoch($t);
-    my $datatime = $epoch - $backup2hour;
+    my $backup_to_hour = shift;
+    my $epoch = shift;
+    my $datatime = $epoch - $backup_to_hour;
+    print $msg{$t}, "\n";
+
   # foreach ( @$ref ) {
   #     my ($tag, @value) = split / /, $_;
   #     print "store_datum( $datatime, $tag, @value)\n";
   #     }
   # print join("\n", @entries), "\n";
-    print join("\n", @$ref), "\n";
+  # print join("\n", @$ref), "\n";
     }
 
 sub store_datum { # assumes hourly data!
