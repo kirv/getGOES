@@ -29,14 +29,9 @@ my $timestamp;
 my @data;
 
 my $source = shift;
-if ( defined $source ) {
-    open STDIN, '<', $source
-        or die "unable to open $source file in object\n";
-    }
-else {
-    open STDIN, '<', '@results'
-        or die "unable to open \@results file in object\n";
-    }
+$source = '@results' unless defined $source;
+open STDIN, '<', $source
+    or die "unable to open $source file in object\n";
 
 # read DCP message(s) on standard input:
 while ( my $line = <> ) {
@@ -47,15 +42,14 @@ while ( my $line = <> ) {
       # next if $len == 0;
         if ( $len == 0 ) {
           # print "<blank>\n($msgbytes)\n";
+            $msgbytes -= 1; # account for linefeed
             next;
             }
       # print "$line\n";
         push @data, $line;
-        $msgbytes -= $len;
-        $msgbytes -= 3  # endings of non-blank lines account for 3 bytes...?
-            unless $msgbytes == 0;
+        $msgbytes -= $len + 1; # account for linefeed
       # print "($msgbytes)\n";
-        next;
+        next unless $msgbytes <= 0;
         }
 
     if ( @data ) {
@@ -68,7 +62,17 @@ while ( my $line = <> ) {
     next unless $line =~ m/^$dcpid/;
     my @fields;
     ($timestamp, @fields) = parse_header($line);
+    unless ( $fields[6] eq 'G' ) {
+        exit 1 if $source eq '@results';
+        warn "skipping not-good message\n";
+        next;
+        }
     $msgbytes = $fields[14];
+    # adjust message length per note (4) at:
+    # http://dcs.noaa.gov/dapsuser.htm#APPENDIX D:  DOWNLOADED DCP MESSAGE FORMAT
+    # to account for missing 4-byte binary DCP address
+    $msgbytes -= 4;
+
     my $data = pop @fields;
 
   # print "$timestamp, @fields\n";
@@ -81,6 +85,8 @@ while ( my $line = <> ) {
       # print "$data\n";
       # print "($msgbytes)\n";
         }
+    # 1 byte for line feed following header line + optional data:
+    $msgbytes -= 1;
 
     $dcpmsg{$timestamp}->[0] = \@fields;
 

@@ -22,7 +22,7 @@ done < %config
 tob ..validate-dcpid $dcpid ||
     exit 2
 
-w3m -dump "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hrs" \
+w3m -dump -cols 10000 "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hrs" \
     > @results
 
 lines=$(wc -l @results)
