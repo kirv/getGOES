@@ -1,17 +1,9 @@
 #!/usr/bin/perl -w
 use strict;
 use warnings;
-use Time::Local qw(timegm);
 
-my @tags = qw(
-    address year day hour minute second failcode
-    qsignalstrength qfreqofs qmodulation qdata
-    channel spacecraft uplink
-    datalen
-    );
-
-my $dcpid;
 # read platform ID from %config file:
+my $dcpid;
 open CONFIG, '<', '%config' or die "no config file found\n";
 while ( <CONFIG> ) {
     chomp;
@@ -24,137 +16,66 @@ die "no GOES DCP platform id defined for object\n"
 
 my $source = shift;
 $source = '@results' unless defined $source;
-open STDIN, '<', $source
-    or die "unable to open $source file in object\n";
 
-my %hdr;
-my %msg;
- 
-my $iso8601_time;
-my $count;
-my $message;
+if ( $source eq '-' ) {
+    # nothing to do, just read input from stdin
+    }
+elsif ( $source eq '--help' ) {
+    exec "pod2text $0";
+    }
+elsif ( $source =~ m/^-/ ) {
+    die "unknown option: $source\n";
+    }
+else {
+    open STDIN, '<', $source
+        or die "unable to open $source file in object\n";
+    }
 
-# read DCP message(s) on standard input:
+my ($header, $id, $len, $data);
 while ( <> ) {
     chomp;
-    if ( m/^$dcpid/ ) { # expect this to be a DCP message header
-        # store previous message
-        $msg{$iso8601_time} = $message if $message;
-        undef $message;
-        undef $count;
-        my @fields;
-        ($iso8601_time, @fields) = parse_header($_);
-        unless ( $fields[6] eq 'G' ) {
-            exit 1 if $source eq '@results';
-            warn "skipping not-good message with status $fields[6]\n";
-            next;
-            }
-        $count = $fields[14];
-        $message = pop(@fields) . "\n";
-        $count -= length $message;
-        $hdr{$iso8601_time} = [ @fields, substr($_, 0, 37) ];
+    
+    if ( m/^($dcpid\S{24}(\d\d\d\d\d))(.*)$/ ) { # DCP response header
+        print_output()
+            if defined $len;
+        undef $len;
+        ($header, $len, $data) = ($1, $2, $3);
+        $data .= "\n";
         next;
         }
-    next unless $count;
-    $message .= $_ . "\n";
-    $count -= length($_) + 1;
-    undef $count if $count <= 0;
+    $data .= $_ . "\n";
     }
 
-foreach my $t ( sort keys %msg ) {
-    print "$t\n";
-  # my $epoch = store_header($t);
-  # my ($m, $s) = ($hdr{$t}->[4,5]);
-  # my $backup_to_hour = $m * 60 + $s;
-  # store_message($t, $backup_to_hour, $epoch);
+print_output()
+    if defined $len;
+
+sub print_output {
+    print $header, "\n";
+    print substr($data,0,$len), "\n";
+    $len -= length($data) + 1; # also account for trailing newline
+    printf "%${len}s\n", ' '
+        if $len > 0;
     }
 
-exit 0;
+=head1 NAME
 
-sub parse_header { 
-    my $header = shift; 
-    my @h = $header =~ m/
-        (.{8}) #  0 + ADDRESS 8 DCP address 
-        (..)   #  1 - YEAR 2 Year message was received
-        (...)  #  2 - DOY 3 Day of year message received
-        (..)   #  3 - HOUR 2 Hour message was received
-        (..)   #  4 - MINUTE 2 Minute message was received
-        (..)   #  5 - SECOND 2 Second message was received
-        (.)    #  6 + FAILURE_CODE 1 Code for message (see Notes)
-        (..)   #  7 + SIGNAL_STRENGTH 2 DAMS quality measurement
-        (..)   #  8 + FREQUENCY_OFFSET 2 DAMS quality measurement
-        (.)    #  9 + MODULATION_INDEX 1 DAMS quality measurement
-        (.)    # 10 + DATA_QUALITY 1 DAMS quality measurement
-        (...)  # 11 + CHANNEL_RECEIVED 3 Channel message received on
-        (.)    # 12 + GOES_SPACECRAFT 1 GOES spacecraft used
-        (..)   # 13 + UPLINK_CARRIER_STATUS 2 Uplink carrier status
-        (.{5}) # 14 + MESSAGE_DATA_LENGTH 5 Message length (bytes) (see Notes)
-        (.*)   # 15 + POSSIBLE DATA AFTER HEADERS
-        /x;
-    warn("ERROR PARSING HEADER:$header") && 
-        return("ERROR PARSING HEADER:$header") unless @h;
+GOES.parse-dcp-message -- print DCP message(s) to stdout
 
-    # timestamp format:       YY DDD / HH : MM : SS
-    my $year = $h[1] < 70 ? 2000 + $h[1] : 1900 + $h[1];
-    my $iso8601_time = sprintf "%04d-%03dT%02d:%02d:%02dZ", 
-        $year, $h[2], $h[3], $h[4], $h[5];
+=head1 SYNOPSIS
 
-    # return the timestamp and the 15 header fields, plus possible data
-    return $iso8601_time, @h;
-    }
+    parse-dcp-message [--help] [SOURCE]
 
-sub calculate_epoch { # convert iso8601 format to seconds since epoch
-    my $t = shift;
-    my ($y,$d,$h,$m,$s) = $t =~ m/^(\d{4})-(\d+)T(\d\d):(\d\d):(\d\d)Z/;
-    return timegm(0,0,0,1,0,$y) + ($d-1)*3600*24 + $h*3600 + $m*60 + $s;
-    }
+=head1 DESCRIPTION
 
-sub store_header {
-    my $t = shift;
-    my @fields = $hdr{$t}->[0..14];
-    my $epoch = calculate_epoch($t);
-    my $command = "dcp-header.store --tzofs=0000 --time=$epoch " .
-        join(',', $hdr{$t}->[0..14]);
-    print "tob $command\n";
-  # system("tob $command");
-    return $epoch;
-    }
+Filter @results or other specified file in GOES object, or filter 
+standard input if '-' is given as source.
 
-sub store_message {
-    my $t = shift;
-    my $backup_to_hour = shift;
-    my $epoch = shift;
-    my $datatime = $epoch - $backup_to_hour;
-    print $msg{$t}, "\n";
+DCP message header is output on a line, terminated with a newline.
+The message body starts on the next line, and is terminated with a
+newline.  The body is of length as shown in the last header field,
+padded with trailing spaces if necessary.
 
-  # foreach ( @$ref ) {
-  #     my ($tag, @value) = split / /, $_;
-  #     print "store_datum( $datatime, $tag, @value)\n";
-  #     }
-  # print join("\n", @entries), "\n";
-  # print join("\n", @$ref), "\n";
-    }
+=head1 AUTHOR
 
-sub store_datum { # assumes hourly data!
-    my $t = shift;
-    my $tag = shift;
-    my @value = @_;
-    my $interval = 3600 / scalar @value;
-    @value = reverse @value if
-        scalar @value > 1 && -e '.data-order-15min=right-to-left';
-    while ( @value ) {
-        my $val = shift @value;
-        my $command = join ' ', 
-            "tob",
-            "rawdata/$tag.store",
-            "--tzofs=0000",
-            "--time=$t",
-            "--interval=$interval",
-            "--",
-            "$val";
-        print $command, "\n";
-      # system($command);
-        $t += $interval;  # advance time to next interval
-        }
-    }
+Ken.Irving@alaska.edu, 2010
 
