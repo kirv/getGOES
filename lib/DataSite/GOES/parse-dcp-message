@@ -2,6 +2,9 @@
 use strict;
 use warnings;
 
+use constant TOB => '/usr/local/bin/tob'; # kludge to hard-code this path?
+use constant DCP_OBJECTS => 'dcp-msg';
+
 # read platform ID from %config file:
 my $dcpid;
 open CONFIG, '<', '%config' or die "no config file found\n";
@@ -14,32 +17,45 @@ close CONFIG or die "failed to close config file \%config\n";
 die "no GOES DCP platform id defined for object\n"
     unless $dcpid;
 
-my $source = shift;
-$source = '@results' unless defined $source;
+my $source = '@results'; # default source for data 
+my $store_to_objects;
 
-if ( $source eq '-' ) {
-    # nothing to do, just read input from stdin
+while ( my $arg = shift ) {
+    if ( $arg eq '--store' ) {
+        $store_to_objects = 1;
+        }
+    elsif ( $arg eq '--help' ) {
+        exec "pod2text $0";
+        }
+    elsif ( $arg eq '-' ) {
+        $source = '-';
+        }
+    elsif ( $arg =~ m/^-/ ) {
+        die "unknown option: $arg\n";
+        }
+    else {
+        $source = $arg;
+        }
     }
-elsif ( $source eq '--help' ) {
-    exec "pod2text $0";
-    }
-elsif ( $source =~ m/^-/ ) {
-    die "unknown option: $source\n";
-    }
-else {
+
+unless ( $source eq '-' ) {
     open STDIN, '<', $source
         or die "unable to open $source file in object\n";
     }
 
-my ($header, $id, $len, $data);
+my (@header, $id, $len, $data, $iso8601_time, $year, $yseconds);
 while ( <> ) {
     chomp;
     
-    if ( m/^($dcpid\S{24}(\d\d\d\d\d))(.*)$/ ) { # DCP response header
+    if ( m/^$dcpid\S{29}/ ) { # DCP response header
         print_output()
             if defined $len;
-        undef $len;
-        ($header, $len, $data) = ($1, $2, $3);
+        @header = parse_header($_);
+        $len = $header[14];
+        $yseconds = pop @header;
+        $year = pop @header;
+        $iso8601_time = pop @header;
+        $data = pop @header;
         $data .= "\n";
         next;
         }
@@ -49,12 +65,70 @@ while ( <> ) {
 print_output()
     if defined $len;
 
+# functions follow
+
 sub print_output {
-    print $header, "\n";
+    return store_dcp_message( $header[6] ) if $store_to_objects;
+    print "$iso8601_time\n";
+    print "@header\n";
     print substr($data,0,$len), "\n";
     $len -= length($data) + 1; # also account for trailing newline
     printf "%${len}s\n", ' '
         if $len > 0;
+    }
+
+sub store_dcp_message {
+    my $status_code = shift;
+    my $target = 'failed'; # applies to any code other than G,?,M
+    $target = 'good' if $status_code eq 'G';
+    $target = 'missed' if $status_code eq 'M';
+    $target = 'parity-error' if $status_code eq '?';
+    $target = DCP_OBJECTS . '/' . $target;
+    open STORE, '|-',
+        TOB . ' ' . "$target.store",
+        "--time $year,$yseconds --encode-newlines --tzofs 0"
+        or die "failed to open pipe to '$target' timeseries object\n";
+
+    print STORE "$iso8601_time\n";
+    print STORE "@header\n";
+    print STORE substr($data,0,$len), "\n";
+    $len -= length($data) + 1; # also account for trailing newline
+    printf STORE "%${len}s\n", ' '
+        if $len > 0;
+    close STORE or die "failed to close pipe to $target timeseries object\n";
+    }
+
+sub parse_header { 
+    my $header = shift; 
+    my @h = $header =~ m/
+        (.{8}) #  0 + ADDRESS 8 DCP address 
+        (..)   #  1 - YEAR 2 Year message was received
+        (...)  #  2 - DOY 3 Day of year message received
+        (..)   #  3 - HOUR 2 Hour message was received
+        (..)   #  4 - MINUTE 2 Minute message was received
+        (..)   #  5 - SECOND 2 Second message was received
+        (.)    #  6 + FAILURE_CODE 1 Code for message (see Notes)
+        (..)   #  7 + SIGNAL_STRENGTH 2 DAMS quality measurement
+        (..)   #  8 + FREQUENCY_OFFSET 2 DAMS quality measurement
+        (.)    #  9 + MODULATION_INDEX 1 DAMS quality measurement
+        (.)    # 10 + DATA_QUALITY 1 DAMS quality measurement
+        (...)  # 11 + CHANNEL_RECEIVED 3 Channel message received on
+        (.)    # 12 + GOES_SPACECRAFT 1 GOES spacecraft used
+        (..)   # 13 + UPLINK_CARRIER_STATUS 2 Uplink carrier status
+        (.{5}) # 14 + MESSAGE_DATA_LENGTH 5 Message length (bytes) (see Notes)
+        (.*)   # 15   message may start immediately following header
+        /x;
+    die("ERROR PARSING HEADER:$header") unless @h;
+
+    # ISO8601 timestamp format:  YY '-' DDD 'T' HH ':' MM ':' SS 'Z'
+    my $year = $h[1] < 70 ? 2000 + $h[1] : 1900 + $h[1];
+    my $ts_iso8601 = sprintf "%04d-%03dT%02d:%02d:%02dZ", 
+        $year, $h[2], $h[3], $h[4], $h[5];
+    # for storage to TimeSeries object we'll need year and seconds-into-year:
+    my $ysec = ( $h[2] - 1 ) * 86400 + ( ( $h[3] * 60 ) + $h[4] ) * 60 + $h[5];
+
+    # return the 15 header fields, the start of message, and timestamps
+    return @h, $ts_iso8601, $year, $ysec;
     }
 
 =head1 NAME

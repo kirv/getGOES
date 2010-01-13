@@ -1,0 +1,35 @@
+#!/bin/sh
+
+error () {
+    echo "$@" >&2
+    exit 1
+    }
+
+test -n "$1" ||
+    error "synopsis: init DCPID [NAME ...]"
+
+dcpid=$1 && shift
+tob ..validate-dcpid $dcpid ||
+    error "dcpid value not validated: $dcpid"
+echo $dcpid > @DCPID
+chmod -w @DCPID
+
+name="$@"
+test -n "$name" ||
+    name=$TOB_object
+
+echo "$name" > @NAME
+
+tob-new ingest      Aggregate  || exit 2
+tob-new ingest/log  TimeSeries || exit 2
+tob-new ingest/blob TimeSeries || exit 2
+
+tob-new dcp-msg              Aggregate  || exit 2
+tob-new dcp-msg/good         TimeSeries || exit 2
+tob-new dcp-msg/parity-error TimeSeries || exit 2
+tob-new dcp-msg/missed       TimeSeries || exit 2
+tob-new dcp-msg/failed       TimeSeries || exit 2
+
+tob-new data-raw    Aggregate  || exit 2
+tob-new data        Aggregate  || exit 2
+
