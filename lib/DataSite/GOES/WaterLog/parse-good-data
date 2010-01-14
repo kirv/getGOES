@@ -1,0 +1,43 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+
+open STDIN, '<', "ingest/\@good" or die $!;
+
+my $timestamp = <>;
+print $timestamp;
+
+<>; # discard dcp header fields
+
+my ($year, $day, $hour, $minute, $second) =
+    $timestamp =~ m/(\d{4})-(\d{3})T(\d\d):(\d\d):(\d\d)Z/;
+
+# prepare times for hourly, 1/2-hour, 15-min data
+
+my $min15 = $minute - $minute % 15;
+my $min30 = $minute - $minute % 30;
+
+my $ysec_hourly = ($day-1) * 86400 + $hour * 3600;
+my $ysec_last15 = ($day-1) * 86400 + ( $hour * 60 + $min15 ) * 60;
+my $ysec_last30 = ($day-1) * 86400 + ( $hour * 60 + $min30 ) * 60;
+
+print "$minute\n$min15\n$min30\n";
+
+while ( <> ) {
+    chomp;
+    next if m/^\s*$/;
+
+    my ( $tag, @values ) = split / /;
+
+    if ( @values == 1 ) {
+        print "tob data-raw/$tag.store --time $year,$ysec_hourly @values\n";
+        }
+    elsif ( @values == 2 ) {
+        print "tob data-raw/$tag.store --time $year,$ysec_last30 @values\n";
+        }
+    elsif ( @values == 4 ) {
+        print "tob data-raw/$tag.store --time $year,$ysec_last15 @values\n";
+        }
+    }
+
+

@@ -2,22 +2,20 @@
 use strict;
 use warnings;
 
-use constant TOB => '/usr/local/bin/tob'; # kludge to hard-code this path?
 use constant DCP_OBJECTS => 'dcp-msg';
 
-# read platform ID from %config file:
+my $tob = '/usr/local/bin/tob'; # kludge to hard-code this path?
+
+# read platform ID from @DCPID file:
 my $dcpid;
-open CONFIG, '<', '%config' or die "no config file found\n";
-while ( <CONFIG> ) {
-    chomp;
-    $dcpid = $1 if m/dcpid\s*=\s*([0-9A-Fa-f]{8})$/;
-    }
-close CONFIG or die "failed to close config file \%config\n";
+open DCPID, '<', '@DCPID' or die $!;
+chomp( $dcpid = <DCPID> );
+close DCPID or die $!;
 
-die "no GOES DCP platform id defined for object\n"
-    unless $dcpid;
+die "invalid platform id: $dcpid\n"
+    unless $dcpid =~ m/^[0-9A-Fa-f]{8}$/;
 
-my $source = '@results'; # default source for data 
+my $source = 'ingest/@raw'; # default source for data 
 my $store_to_objects;
 
 while ( my $arg = shift ) {
@@ -68,7 +66,7 @@ print_output()
 # functions follow
 
 sub print_output {
-    return store_dcp_message( $header[6] ) if $store_to_objects;
+    return store_dcp_message() if $store_to_objects;
     print "$iso8601_time\n";
     print "@header\n";
     print substr($data,0,$len), "\n";
@@ -78,15 +76,16 @@ sub print_output {
     }
 
 sub store_dcp_message {
-    my $status_code = shift;
+    my $status_code = $header[6];
     my $target = 'failed'; # applies to any code other than G,?,M
     $target = 'good' if $status_code eq 'G';
     $target = 'missed' if $status_code eq 'M';
     $target = 'parity' if $status_code eq '?';
+    my $last_target = $target;
     $target = DCP_OBJECTS . '/' . $target;
-    open STORE, '|-',
-        TOB . ' ' . "$target.store",
-        "--time $year,$yseconds --encode-newlines --tzofs 0"
+    open STORE, 
+        "| /usr/bin/tee ingest/\@$last_target | " .
+        "$tob $target.store --time $year,$yseconds --encode-newlines --tzofs 0"
         or die "failed to open pipe to '$target' timeseries object\n";
 
     print STORE "$iso8601_time\n";
@@ -131,17 +130,19 @@ sub parse_header {
     return @h, $ts_iso8601, $year, $ysec;
     }
 
+=pod
+
 =head1 NAME
 
 GOES.parse-dcp-message -- print DCP message(s) to stdout
 
 =head1 SYNOPSIS
 
-    parse-dcp-message [--help] [SOURCE]
+    parse-dcp-message [--store] [--help] [SOURCE]
 
 =head1 DESCRIPTION
 
-Filter @results or other specified file in GOES object, or filter 
+Filter ingest/@raw or other specified file in GOES object, or filter 
 standard input if '-' is given as source.
 
 DCP message header is output on a line, terminated with a newline.

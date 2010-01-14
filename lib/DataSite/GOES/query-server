@@ -1,0 +1,39 @@
+#!/bin/sh
+
+hrs="$1"
+test -n "$hrs" || hrs=1
+
+dcpid=$(<@DCPID)
+
+cd ingest || exit 1
+
+# "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hrs"
+
+server=lrgseddn1.cr.usgs.gov
+cgi_path=cgi-bin/fieldtest.pl
+
+w3m -dump -cols 10000 \
+    "http://$server/${cgi_path}?DCPID=$dcpid&SINCE=$hrs" > @raw
+
+# build a descriptor line for heading accumulated raw query results
+
+now=$(date --iso=seconds)
+
+ym=${now%-??T*}
+
+lines=$(wc -l @raw)
+lines=${lines% *}
+
+unset user &&
+    test -n "$USER" &&
+        user="user=$USER"
+
+fields=( $now $server $dcpid qryhrs=$hrs lines=$lines $user )
+
+allraw="@$ym-allraw"
+
+echo "# ${fields[@]}" >> "$allraw"
+
+cat @raw >> "$allraw"
+
+

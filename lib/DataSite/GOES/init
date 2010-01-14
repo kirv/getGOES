@@ -16,7 +16,7 @@ chmod -w @DCPID
 
 name="$@"
 test -n "$name" ||
-    name=$TOB_object
+    name=$TOB_NEW_target
 
 echo "$name" > @NAME
 
@@ -28,7 +28,4 @@ tob-new dcp-msg/good    TimeSeries || exit 2
 tob-new dcp-msg/parity  TimeSeries || exit 2
 tob-new dcp-msg/missed  TimeSeries || exit 2
 tob-new dcp-msg/failed  TimeSeries || exit 2
-
-tob-new data-raw        Aggregate  || exit 2
-tob-new data            Aggregate  || exit 2
 

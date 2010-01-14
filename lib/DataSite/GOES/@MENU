@@ -1,5 +1,4 @@
 super.menu
-results
+query-server
 parse-dcp-message
-process-dcp-message
-query-dcp-server
+parse-good-data

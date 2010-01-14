@@ -9,9 +9,9 @@ tob ..validate-dcpid $dcpid ||
     exit 2
 
 w3m -dump -cols 10000 "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hrs" \
-    > @results
+    > ingest/@results
 
-lines=$(wc -l @results)
+lines=$(wc -l ingest/@results)
 lines=${lines% *}
 
 loginfo="id=$dcpid,lines=$lines"
@@ -26,5 +26,6 @@ now=$(date --iso=seconds)
 # define a prefix for separate files by month:
 ym=$(date +%Y-%m)
 echo \#query: $now,$loginfo >> ingest/@$ym-alldata
-cat @results >> ingest/@$ym-alldata
+cat ingest/@results >> ingest/@$ym-alldata
+
 

@@ -3,4 +3,5 @@ super.menu
 .ref = DCP-MESSAGE-FORMAT
 .ref2 = DCP-header-description
 
-last-raw = results
+raw = cat ingest/@raw
+allraw = less ingest/@2010-01-allraw
