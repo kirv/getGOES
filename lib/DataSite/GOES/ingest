@@ -1,31 +1,17 @@
 #!/bin/sh
 
-hrs="$1"
-test -n "$hrs" ||
-    hrs=1
+$self=.
 
-dcpid=$(<@DCPID)
-tob ..validate-dcpid $dcpid ||
-    exit 2
+stage=0
+tob $self.query-server && {
+    stage=1
+    tob $self.parse-dcp-message --store && {
+        stage=2
+        tob $self.parse-good-data --store && {
+            stage=3
+            }
+        }
+    }
 
-w3m -dump -cols 10000 "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hrs" \
-    > ingest/@results
-
-lines=$(wc -l ingest/@results)
-lines=${lines% *}
-
-loginfo="id=$dcpid,lines=$lines"
-
-test -n "$USER" &&
-    loginfo="$loginfo,user=$USER"
-
-tob ingest/log.store $loginfo
-
-# store a last-ditch flat file of log messages and results:
-now=$(date --iso=seconds)
-# define a prefix for separate files by month:
-ym=$(date +%Y-%m)
-echo \#query: $now,$loginfo >> ingest/@$ym-alldata
-cat ingest/@results >> ingest/@$ym-alldata
-
+tob ingest/log.store stage=$stage
 
