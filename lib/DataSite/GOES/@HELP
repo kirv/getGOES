@@ -1,44 +1,37 @@
 NAME
-    DataSite/GOES -- thinobject class representing a GOES data platform
+    DataSite/GOES -- thinobject class to manage data from a GOES-DCP platform
 
 DESCRIPTION
     The GOES NOAA DCS platform ID is stored in the object, and used to
     retrieve data from a network-connected server.  Results are stored
     in the object and accessed by various methods.
 
-    Initially, queries will be run periodically and stored, but will
-    not be parsed or interpreted.  Later, data will be fully processed
-    and made available from this system, and probably also pushed up to
-    other database systems.
-
 METHODS
-    init -- create log, query, and other contained objects
+    init -- initialize the object when created
     query-dcp-server -- get data for the platform
-    help   -- display this help screen
+    parse-dcp-message -- parse and optionally store dcp message
+    validate-dcpid -- check @DCPID for 8 hexadecimal characters
+
+OBJECTS
+    ingest (Object)             -- container for ingest-related items
+    ingest/log (TimeSeries)     -- log results of ingest query
+    dcp-msg (Aggregate)         -- container for dcp messages:
+    dcp-msg/good (TimeSeries)   -- known-good messages
+    dcp-msg/parity (TimeSeries) -- messages with parity errors
+    dcp-msg/missed (TimeSeries) -- no data was collected from remote DCP
+    dcp-msg/failed (TimeSeries) -- other failures
+    data-raw (Aggregate)        -- container for platform data fields
+    data (Aggregate)            -- container for normalized data fields
 
 PROPERTIES
-    %config -- settings file
-    @results -- output from last query
-    @alldata -- append query-log message and @results from each query
-
-ATTRIBUTES
-    
-OBJECTS
-    query-log (TimeSeries)
-        log time of query, platform ID, amount of data received
-
-    query-blob (TimeSeries)  
-        store data received in each query 
-
-    dcp-header (TimeSeries)
-        store transport data from DCP message headers
-
-    process-dcp-log (TimeSeries)
-        log results of processing and storing raw data
-    
-    rawdata (Aggregate)
-        contains timeseries objects for each sensor/variable in incoming
-        data messages
+    @DCPID                      -- unique DCP identifier
+    @NAME                       -- descriptive name for the site
+    ingest/@raw                 -- unparsed, raw output from last query
+    ingest/@{yy}-{mm}-alldata   -- accumulate raw query results
+    @DCP-MESSAGE-FORMAT         -- reference documentation
+    @DCP-header-description     -- more reference documentation
+    @HELP                       -- this manpage
+    @MENU, %MENU                -- command line menu entries
 
 AUTHOR
     Ken Irving <fnkci@uaf.edu> (c) 2009

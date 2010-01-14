@@ -4,21 +4,7 @@ hrs="$1"
 test -n "$hrs" ||
     hrs=1
 
-test -e %config ||
-    exit 2
-
-unset dcpid name
-while IFS='=' read tag value; do
-  # echo $tag $value
-    test -n "$tag" || continue
-    test ${tag:0:1} == '#' && continue
-    if test $tag == dcpid; then
-        dcpid=$value
-    elif test $tag == name; then
-        name=$value
-    fi
-done < %config
-
+dcpid=$(<@DCPID)
 tob ..validate-dcpid $dcpid ||
     exit 2
 
@@ -33,13 +19,12 @@ loginfo="id=$dcpid,lines=$lines"
 test -n "$USER" &&
     loginfo="$loginfo,user=$USER"
 
-tob query-log.store $loginfo
-
-tob query-blob.store < @results
-
-now=$(date --iso=seconds)
+tob ingest/log.store $loginfo
 
 # store a last-ditch flat file of log messages and results:
-echo \#query: $now,$loginfo >> @alldata
-cat @results >> @alldata
+now=$(date --iso=seconds)
+# define a prefix for separate files by month:
+ym=$(date +%Y-%m)
+echo \#query: $now,$loginfo >> ingest/@$ym-alldata
+cat @results >> ingest/@$ym-alldata
 

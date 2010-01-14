@@ -20,9 +20,8 @@ test -n "$name" ||
 
 echo "$name" > @NAME
 
-tob-new ingest      Aggregate  || exit 2
+tob-new ingest      Object  || exit 2
 tob-new ingest/log  TimeSeries || exit 2
-tob-new ingest/blob TimeSeries || exit 2
 
 tob-new dcp-msg              Aggregate  || exit 2
 tob-new dcp-msg/good         TimeSeries || exit 2
