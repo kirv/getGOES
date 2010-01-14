@@ -1,0 +1,8 @@
+#!/bin/sh
+
+self=.
+tob $self.super.init "$@" || exit
+
+tob-new data-raw Aggregate || exit 2
+tob-new data     Aggregate || exit 2
+
