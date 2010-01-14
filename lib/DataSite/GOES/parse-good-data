@@ -1,0 +1,8 @@
+#!/bin/sh
+
+test -n "$VERBOSE" &&
+    printf "%s.%s is a virtual method\n" >&2
+
+# exit with a value to indicate a virtual method:
+exit 42
+    

@@ -39,33 +39,30 @@ while ( <> ) {
     chomp;
     next if m/^\s*$/;
 
-    my ( $tag, @values ) = split / /;
+    my ( @data ) = split /[" ]?:/;
 
-    # check that initial value exists and is numeric:
-    unless ( @values ) {
-        warn "no data parsed with $tag\n";
-        next;
-        }
-    
-    unless ( $values[0] =~ m/^-?[\d.]+/ ) {
-        warn "non-numeric value in '$tag @values'\n";
-        next;
-        }
-    
-    if ( @values == 1 ) {
+    foreach my $datum ( @data ) {
+      # print "$datum\n";
+        my ( $tag, $ofs_min, $interval, @values ) = split / /, $datum;
+        next unless $tag;
+        if ( $interval eq '#60' ) {
+            warn "expected 1 value in '$datum'\n" && next
+                unless @values == 1;
+            }
+        elsif ( $interval eq '#30' ) {
+            warn "expected 2 values in '$datum'\n" && next
+                unless @values == 2;
+            }
+        elsif ( $interval eq '#15' ) {
+            warn "expected 4 values in '$datum'\n" && next
+                unless @values == 4;
+            }
+        else {
+            warn "unsupported interval in '$datum'\n";
+            }
+        my $ysec = ($day-1) * 86400 + ( $hour * 60 + ($minute-$ofs_min) ) * 60;
         push @tob_new_commands, 
-            "tob data-raw/$tag.store --time $year,$ysec_hourly -- @values";
-        }
-    elsif ( @values == 2 ) {
-        push @tob_new_commands, 
-            "tob data-raw/$tag.store --time $year,$ysec_last30 -- @values";
-        }
-    elsif ( @values == 4 ) {
-        push @tob_new_commands, 
-            "tob data-raw/$tag.store --time $year,$ysec_last15 -- @values";
-        }
-    else {
-        die "should not happen\n";
+            "tob data-raw/$tag.store --time $year,$ysec -- @values";
         }
     }
 
