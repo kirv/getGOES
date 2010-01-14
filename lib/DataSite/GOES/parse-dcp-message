@@ -82,7 +82,7 @@ sub store_dcp_message {
     my $target = 'failed'; # applies to any code other than G,?,M
     $target = 'good' if $status_code eq 'G';
     $target = 'missed' if $status_code eq 'M';
-    $target = 'parity-error' if $status_code eq '?';
+    $target = 'parity' if $status_code eq '?';
     $target = DCP_OBJECTS . '/' . $target;
     open STORE, '|-',
         TOB . ' ' . "$target.store",

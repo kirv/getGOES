@@ -20,15 +20,15 @@ test -n "$name" ||
 
 echo "$name" > @NAME
 
-tob-new ingest      Object  || exit 2
-tob-new ingest/log  TimeSeries || exit 2
+tob-new ingest          Object     || exit 2
+tob-new ingest/log      TimeSeries || exit 2
 
-tob-new dcp-msg              Aggregate  || exit 2
-tob-new dcp-msg/good         TimeSeries || exit 2
-tob-new dcp-msg/parity-error TimeSeries || exit 2
-tob-new dcp-msg/missed       TimeSeries || exit 2
-tob-new dcp-msg/failed       TimeSeries || exit 2
+tob-new dcp-msg         Aggregate  || exit 2
+tob-new dcp-msg/good    TimeSeries || exit 2
+tob-new dcp-msg/parity  TimeSeries || exit 2
+tob-new dcp-msg/missed  TimeSeries || exit 2
+tob-new dcp-msg/failed  TimeSeries || exit 2
 
-tob-new data-raw    Aggregate  || exit 2
-tob-new data        Aggregate  || exit 2
+tob-new data-raw        Aggregate  || exit 2
+tob-new data            Aggregate  || exit 2
 
