@@ -13,7 +13,19 @@ server=lrgseddn1.cr.usgs.gov
 cgi_path=cgi-bin/fieldtest.pl
 
 w3m -dump -cols 10000 \
-    "http://$server/${cgi_path}?DCPID=$dcpid&SINCE=$hrs" > @raw
+    "http://$server/${cgi_path}?DCPID=$dcpid&SINCE=$hrs" |
+    tee @raw |
+    awk "/^$dcpid/{print substr(\$1,1,37)}" > .@_header
+
+cmp .@_header @header > /dev/null 2>&1 && {
+    echo duplicate DCP header >&2
+    exit 1
+    }
+
+mv .@_header @header
+
+# w3m -dump -cols 10000 \
+#     "http://$server/${cgi_path}?DCPID=$dcpid&SINCE=$hrs" > @raw
 
 # build a descriptor line for heading accumulated raw query results
 
@@ -35,5 +47,8 @@ allraw="@$ym-allraw"
 echo "# ${fields[@]}" >> "$allraw"
 
 cat @raw >> "$allraw"
+
+test "@allraw" == "$(readlink $allraw)" ||
+    ln -sf $allraw @allraw
 
 

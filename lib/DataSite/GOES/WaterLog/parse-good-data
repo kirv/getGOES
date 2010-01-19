@@ -2,6 +2,8 @@
 use strict;
 use warnings;
 
+my $tob = '/usr/local/bin/tob';
+
 my $store_to_objects;
 while ( my $opt = shift ) {
     if ( $opt eq '--store' ) {
@@ -52,26 +54,41 @@ while ( <> ) {
         next;
         }
     
+    my $ysec;
+    my $interval;
     if ( @values == 1 ) {
-        push @tob_new_commands, 
-            "tob data-raw/$tag.store --time $year,$ysec_hourly -- @values";
+        $ysec = $ysec_hourly;
+        $interval = 3600;
         }
     elsif ( @values == 2 ) {
-        push @tob_new_commands, 
-            "tob data-raw/$tag.store --time $year,$ysec_last30 -- @values";
+        $ysec = $ysec_last30;
+        $interval = 1800;
         }
     elsif ( @values == 4 ) {
-        push @tob_new_commands, 
-            "tob data-raw/$tag.store --time $year,$ysec_last15 -- @values";
+        $ysec = $ysec_last15;
+        $interval = 900;
         }
     else {
         die "should not happen\n";
         }
+    foreach my $value ( @values ) {
+        push @tob_new_commands, 
+            "$tob data-raw/$tag.store --time $year,$ysec -- $value";
+        $ysec -= $interval;
+        }
     }
 
+my $good = 0;
+my $fail = 0;
 foreach my $command ( @tob_new_commands ) {
     print "$command\n";
-    system "$command" if $store_to_objects;
+    next unless $store_to_objects;
+    if ( system("$command") == 0 ) { 
+        $good += 1;
+        }
+    else { 
+        $fail += 1;
+        }
     }
 
 

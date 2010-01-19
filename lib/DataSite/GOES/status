@@ -1,0 +1,22 @@
+#!/bin/bash
+
+echo $(<@DCPID) $(<@NAME)
+
+printf "%s %s %s\n" \
+    "$(stat -c %y ingest/log)" \
+    ingest/log \
+    "$(tob ingest.log.get | tail -n 1)"
+
+showif="AirTemp ta ATemp VB Battery Batv"
+
+cd data-raw 2>/dev/null || exit
+
+for ob in *; do
+    test "${showif#*$ob}" == "$showif" &&
+        continue
+  # printf "\t%s=%s\n" $ob "$(tob $ob.get | tail -n 1)"
+  # printf "%s %s=%s\n" "$(stat -c %y $ob)" $ob "$(tob $ob.get | tail -n 1)"
+    printf "%s=%s\t" $ob "$(tob $ob.get | tail -n 1)"
+done
+printf "\n"
+

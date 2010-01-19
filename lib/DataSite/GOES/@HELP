@@ -7,10 +7,12 @@ DESCRIPTION
     in the object and accessed by various methods.
 
 METHODS
-    init -- initialize the object when created
-    query-dcp-server -- get data for the platform
+    query-server -- get data for the platform
     parse-dcp-message -- parse and optionally store dcp message
-    validate-dcpid -- check @DCPID for 8 hexadecimal characters
+    parse-good-data -- virtual method to process received data
+    ingest -- call the above three methods in turn 
+    validate-dcpid -- utility to check @DCPID for 8 hexadecimal characters
+    init -- initialize the object when created
 
 OBJECTS
     ingest (Object)             -- container for ingest-related items

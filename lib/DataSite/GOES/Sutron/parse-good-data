@@ -2,6 +2,8 @@
 use strict;
 use warnings;
 
+my $tob = '/usr/local/bin/tob';
+
 my $store_to_objects;
 while ( my $opt = shift ) {
     if ( $opt eq '--store' ) {
@@ -48,21 +50,28 @@ while ( <> ) {
         if ( $interval eq '#60' ) {
             warn "expected 1 value in '$datum'\n" && next
                 unless @values == 1;
+            $interval = 3600;
             }
         elsif ( $interval eq '#30' ) {
             warn "expected 2 values in '$datum'\n" && next
                 unless @values == 2;
+            $interval = 1800;
             }
         elsif ( $interval eq '#15' ) {
             warn "expected 4 values in '$datum'\n" && next
                 unless @values == 4;
+            $interval = 900;
             }
         else {
             warn "unsupported interval in '$datum'\n";
             }
         my $ysec = ($day-1) * 86400 + ( $hour * 60 + ($minute-$ofs_min) ) * 60;
-        push @tob_new_commands, 
-            "tob data-raw/$tag.store --time $year,$ysec -- @values";
+        foreach my $value ( @values ) {
+            push @tob_new_commands, 
+                "$tob data-raw/$tag.store --time $year,$ysec -- $value";
+            $ysec -= $interval;
+            }
+
         }
     }
 

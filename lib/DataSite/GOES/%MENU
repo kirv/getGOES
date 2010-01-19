@@ -6,3 +6,4 @@ super.menu
 raw = cat ingest/@raw
 good = cat ingest/@good
 allraw = less ingest/@2010-01-allraw
+.init = init-data-raw
