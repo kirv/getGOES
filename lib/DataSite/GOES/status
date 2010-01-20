@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo $(<@DCPID) $(<@NAME)
-tob ingest.log.get --last 1
+tob ingest.log.get last 1
 
 showif="AirTemp ta ATemp VB Battery Batv"
 
@@ -13,6 +13,6 @@ cd data-raw 2>/dev/null || {
 for ob in *; do
     test "${showif#*$ob}" == "$showif" &&
         continue
-    printf "%s\t%s\n"  "$(tob $ob.get --last 1)" $ob
+    printf "%s\t%s\n"  "$(tob $ob.get last 1)" $ob
 done
 

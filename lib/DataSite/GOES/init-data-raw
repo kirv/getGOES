@@ -1,0 +1,61 @@
+#!/bin/bash
+
+self=.
+
+unset ok2create
+while test -n "$1"; do
+    opt=$1 && shift
+    if test $opt == --ok2create; then
+        ok2create=1
+    else
+        echo unknown argument: $opt >&2
+        exit 1
+    fi
+done
+
+commands=()
+unset lastysec
+unset lastobject
+while read line; do
+    # expected format:
+    #   /usr/local/bin/tob data-raw/Batv.store --time 2010,1368000 -- 12.30
+    object=${line#*tob }        #   object=data-raw/Batv.store --time ...
+    object=${object%.store*}    #   object=data-raw/Batv
+    ysec=${line#*--time*,}      #   ysec=1368000 -- 12.30
+    ysec=${ysec%% *}            #   ysec=1368000
+
+    if test $object != "$lastobject"; then
+      # echo case 1 ${object#*/}
+        commands[${#commands[@]}]="tob-new $object TimeSeries/1hour"
+        unset adjust_interval
+    elif test -n "$adjust_interval"; then
+      # echo case 2 ${object#*/}
+        # already adjusted the interval for this object, so skip this
+        continue
+    elif test "$ysec" -gt "$lastysec"; then
+      # echo case 3 ${object#*/}
+        interval=$((($ysec-$lastysec)/60)) 
+        commands[${#commands[@]}-1]="tob-new $object TimeSeries/${interval}min"
+        adjust_interval=1
+    elif test $ysec -lt $lastysec; then
+      # echo case 4 ${object#*/}
+        interval=$((($lastysec-$ysec)/60))
+        commands[${#commands[@]}-1]="tob-new $object TimeSeries/${interval}min"
+        adjust_interval=1
+    else
+      # echo case 5 ${object#*/}
+        # test $ysec == $lastysec; then
+        echo $TOB_object.$TOB_method error: duplicate object and time >&2
+        exit 2
+    fi
+
+    lastobject=$object
+    lastysec=$ysec
+
+done < <(tob $self.parse-good-data)
+
+for cmd in "${commands[@]}"; do
+    echo $cmd
+    test -n "$ok2create" &&
+        $cmd
+done
