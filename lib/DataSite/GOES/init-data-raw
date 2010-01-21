@@ -18,9 +18,9 @@ unset lastysec
 unset lastobject
 while read line; do
     # expected format:
-    #   /usr/local/bin/tob data-raw/Batv.store --time 2010,1368000 -- 12.30
-    object=${line#*tob }        #   object=data-raw/Batv.store --time ...
-    object=${object%.store*}    #   object=data-raw/Batv
+    #   /usr/local/bin/tob raw/Batv.store --time 2010,1368000 -- 12.30
+    object=${line#*tob }        #   object=raw/Batv.store --time ...
+    object=${object%.store*}    #   object=raw/Batv
     ysec=${line#*--time*,}      #   ysec=1368000 -- 12.30
     ysec=${ysec%% *}            #   ysec=1368000
 

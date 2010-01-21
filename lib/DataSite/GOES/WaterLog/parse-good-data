@@ -73,7 +73,7 @@ while ( <> ) {
         }
     foreach my $value ( @values ) {
         push @tob_new_commands, 
-            "$tob data-raw/$tag.store --time $year,$ysec -- $value";
+            "$tob raw/$tag.store --time $year,$ysec -- $value";
         $ysec -= $interval;
         }
     }

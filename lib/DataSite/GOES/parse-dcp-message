@@ -2,8 +2,6 @@
 use strict;
 use warnings;
 
-use constant DCP_OBJECTS => 'dcp-msg';
-
 my $tob = '/usr/local/bin/tob'; # kludge to hard-code this path?
 
 # read platform ID from @DCPID file:
@@ -82,7 +80,7 @@ sub store_dcp_message {
     $target = 'missed' if $status_code eq 'M';
     $target = 'parity' if $status_code eq '?';
     my $last_target = $target;
-    $target = DCP_OBJECTS . '/' . $target;
+    $target = 'ingest/' . $target;
     open STORE, 
         "| /usr/bin/tee ingest/\@$last_target | " .
         "$tob $target.store --time $year,$yseconds --encode-newlines --tzofs 0"

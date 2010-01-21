@@ -5,7 +5,7 @@ tob ingest.log.get last 1
 
 showif="AirTemp ta ATemp VB Battery Batv"
 
-cd data-raw 2>/dev/null || {
+cd raw 2>/dev/null || {
     printf "\n"
     exit
     }

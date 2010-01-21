@@ -68,7 +68,7 @@ while ( <> ) {
         my $ysec = ($day-1) * 86400 + ( $hour * 60 + ($minute-$ofs_min) ) * 60;
         foreach my $value ( @values ) {
             push @tob_new_commands, 
-                "$tob data-raw/$tag.store --time $year,$ysec -- $value";
+                "$tob raw/$tag.store --time $year,$ysec -- $value";
             $ysec -= $interval;
             }
 

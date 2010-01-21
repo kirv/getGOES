@@ -17,12 +17,11 @@ METHODS
 OBJECTS
     ingest (Object)             -- container for ingest-related items
     ingest/log (TimeSeries)     -- log results of ingest query
-    dcp-msg (Aggregate)         -- container for dcp messages:
-    dcp-msg/good (TimeSeries)   -- known-good messages
-    dcp-msg/parity (TimeSeries) -- messages with parity errors
-    dcp-msg/missed (TimeSeries) -- no data was collected from remote DCP
-    dcp-msg/failed (TimeSeries) -- other failures
-    data-raw (Aggregate)        -- container for platform data fields
+    ingest/good (TimeSeries)    -- known-good messages
+    ingest/parity (TimeSeries)  -- messages with parity errors
+    ingest/missed (TimeSeries)  -- no data was collected from remote DCP
+    ingest/failed (TimeSeries)  -- other failures
+    raw (Aggregate)             -- container for platform data fields
     data (Aggregate)            -- container for normalized data fields
 
 PROPERTIES
