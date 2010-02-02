@@ -26,7 +26,7 @@ while read line; do
 
     if test $object != "$lastobject"; then
       # echo case 1 ${object#*/}
-        commands[${#commands[@]}]="tob-new $object TimeSeries/1hour"
+        commands[${#commands[@]}]="tob-new $object TimeSeries interval=3600"
         unset adjust_interval
     elif test -n "$adjust_interval"; then
       # echo case 2 ${object#*/}
@@ -34,13 +34,13 @@ while read line; do
         continue
     elif test "$ysec" -gt "$lastysec"; then
       # echo case 3 ${object#*/}
-        interval=$((($ysec-$lastysec)/60)) 
-        commands[${#commands[@]}-1]="tob-new $object TimeSeries/${interval}min"
+        sec=$(($ysec-$lastysec)) 
+        commands[${#commands[@]}-1]="tob-new $object TimeSeries interval=$sec"
         adjust_interval=1
     elif test $ysec -lt $lastysec; then
       # echo case 4 ${object#*/}
-        interval=$((($lastysec-$ysec)/60))
-        commands[${#commands[@]}-1]="tob-new $object TimeSeries/${interval}min"
+        sec=$(($lastysec-$ysec))
+        commands[${#commands[@]}-1]="tob-new $object TimeSeries interval=$sec"
         adjust_interval=1
     else
       # echo case 5 ${object#*/}
