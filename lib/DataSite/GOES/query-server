@@ -7,9 +7,18 @@ dcpid=$(<@DCPID)
 
 cd ingest || exit 1
 
+# prior to May2010:
 # "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hrs"
+# 
+# as of 03may2010:
+# "http://lrgseddn3.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=326AF6FE&SINCE=8"
+#
+# EDDN home page: http://eddn.usgs.gov/
+# DCP Field Test - Low-Bandwidth Message Access:
+#       http://eddn.usgs.gov/fieldtest.html
 
-server=lrgseddn1.cr.usgs.gov
+
+server=lrgseddn3.cr.usgs.gov
 cgi_path=cgi-bin/fieldtest.pl
 
 w3m -dump -cols 10000 \

@@ -4,26 +4,17 @@ tob=/usr/local/bin/tob
 
 self=.
 
-stage=0
-$tob $self.query-server && {
-    stage=1
-    $tob $self.parse-dcp-message --store && {
-        stage=2
-        $tob $self.parse-good-data --store && {
-            stage=3
-            }
-        }
+log() {
+    unset user
+    test -n "$USER" && user="user=$USER"
+    $tob ingest/log.store "$*" $user
+    exit 0
     }
 
-logmsg=(
-    'query-server failed'
-    'parse-dcp-message failed'
-    'parse-good-data failed'
-    'success'
-    )
+$tob $self.query-server              || log 'query-server failed'
+$tob $self.parse-dcp-message --store || log 'parse-dcp-message failed'
+$tob $self.parse-good-data --store   || log 'parse-good-data failed'
+$tob $self.data.make-view --store    || log 'data-make-view failed'
 
-unset user
-test -n "$USER" && user="user=$USER"
-
-$tob ingest/log.store "${logmsg[$stage]}" $user
+log 'success'
 
