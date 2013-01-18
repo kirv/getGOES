@@ -2,8 +2,6 @@
 use strict;
 use warnings;
 
-my $tob = '/usr/local/bin/tob';
-
 my $store_to_objects;
 while ( my $opt = shift ) {
     if ( $opt eq '--store' ) {
@@ -62,16 +60,20 @@ while ( <> ) {
                 unless @values == 4;
             $interval = 900;
             }
+        elsif ( $tag eq 'Battery' ) {
+            # this is a hack to parse Battery field for Prince Ck...
+            $values[0] = $interval;
+            $interval = 3600;
+            }
         else {
             warn "unsupported interval in '$datum'\n";
             }
         my $ysec = ($day-1) * 86400 + ( $hour * 60 + ($minute-$ofs_min) ) * 60;
         foreach my $value ( @values ) {
             push @tob_new_commands, 
-                "$tob raw/$tag.store --time $year,$ysec -- $value";
+                "tob raw/$tag.store --time $year,$ysec -- $value";
             $ysec -= $interval;
             }
-
         }
     }
 
