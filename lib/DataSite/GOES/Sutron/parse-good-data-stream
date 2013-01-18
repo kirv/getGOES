@@ -1,0 +1,91 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+
+my $store_to_objects;
+
+while ( my $opt = shift ) {
+    if ( $opt eq '--store' ) {
+        $store_to_objects = 1;
+        }
+    else {
+        die "unknown argument: $opt\n";
+        }
+    }
+
+my @tob_new_commands;
+my ($year, $day, $hour, $minute, $second);
+my ($min15, $min30, $ysec_hourly, $ysec_last15, $ysec_last30);
+
+while ( <> ) {
+    chomp;
+    next if m/^\s*$/;
+
+
+    # parse record timestamp:
+  # warn "TIMESTAMP $_\n" if m/^\d{4}-.*Z$/;
+    if ( m/^\d\d\d\d-.*Z$/ ) {
+        warn "TIMESTAMP: $_\n";
+        
+        ($year, $day, $hour, $minute, $second) =
+            m/(\d{4})-(\d{3})T(\d\d):(\d\d):(\d\d)Z/;
+        
+        # prepare times for hourly, 1/2-hour, 15-min data
+        
+        $min15 = $minute - $minute % 15;
+        $min30 = $minute - $minute % 30;
+        
+        $ysec_hourly = ($day-1) * 86400 + $hour * 3600;
+        $ysec_last15 = ($day-1) * 86400 + ( $hour * 60 + $min15 ) * 60;
+        $ysec_last30 = ($day-1) * 86400 + ( $hour * 60 + $min30 ) * 60;
+	next;
+        }
+
+    # discard dcp header fields
+    warn "HEADER $_\n" if m/^[0-9A-F]{8} \d\d/;
+    next if m/^[0-9A-F]{8} \d\d/;
+
+    my ( @data ) = split /[" ]?:/;
+
+    foreach my $datum ( @data ) {
+      # print "$datum\n";
+        my ( $tag, $ofs_min, $interval, @values ) = split / /, $datum;
+        next unless $tag;
+        if ( $interval eq '#60' ) {
+            warn "expected 1 value in '$datum'\n" && next
+                unless @values == 1;
+            $interval = 3600;
+            }
+        elsif ( $interval eq '#30' ) {
+            warn "expected 2 values in '$datum'\n" && next
+                unless @values == 2;
+            $interval = 1800;
+            }
+        elsif ( $interval eq '#15' ) {
+            warn "expected 4 values in '$datum'\n" && next
+                unless @values == 4;
+            $interval = 900;
+            }
+        elsif ( $#values == -1 and defined $interval and $tag eq 'Battery' ) {
+            # this is a hack to parse Battery field for Prince Ck...
+            $values[0] = $interval;
+            $interval = 3600;
+            }
+        else {
+            warn "unsupported interval in '$datum'\n";
+            }
+        my $ysec = ($day-1) * 86400 + ( $hour * 60 + ($minute-$ofs_min) ) * 60;
+        foreach my $value ( @values ) {
+            push @tob_new_commands, 
+                "tob raw/$tag.store --time $year,$ysec -- $value";
+            $ysec -= $interval;
+            }
+        }
+    }
+
+foreach my $command ( @tob_new_commands ) {
+    print "$command\n";
+    system "$command" if $store_to_objects;
+    }
+
+
