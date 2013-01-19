@@ -1,0 +1,59 @@
+#!/bin/bash
+
+self=.
+tob=/usr/local/bin/tob
+
+# run TimeSeries.get query with given arguments, pipe to perl program
+# results are expected to be applied to one or more column objects, so
+# should have the form:
+#   
+#       Stage1.get last 4
+#       2010-05-10 10:00:00-0800        2.50
+#       2010-05-10 10:30:00-0800        2.47
+#       ...
+#   
+#       stage2.get last 4
+#       2010-05-10 10:00:00-0800        2.99
+#       2010-05-10 10:30:00-0800        2.99
+#       ...
+# 
+# But the timestamp can be anything if set by the --ots FORMAT option...
+#
+# NOTE: timestamp is assumed to be tab-terminated.
+
+$tob $self.super.get "$@" | /usr/bin/perl -wne '
+    my $col;
+    my @col_order;
+    my @ts_order;
+    my %data;
+    while ( <> ) {
+        chomp;
+        s/\r//;
+        next if m/^\s*$/;
+        # grab the object name from the OBJECT.get ... line:
+        if ( m/^(\S+).get/ ) {
+            $col = $1;
+            $data{$col} = {};
+            push @col_order, $col;
+            next;
+            }
+        my ($ts, $datum) = split /\t/;
+        die "timestamp must be tab-terminated!\n" unless $ts;
+        $data{$col}->{$ts} = $datum;
+        push @ts_order, $ts if scalar @col_order == 1;
+        }
+
+    print join(",", "timestamp", @col_order), "\n";
+
+    foreach my $ts ( @ts_order ) {
+        my @record;
+        my $skip;
+        foreach $col ( @col_order ) {
+            my $value = $data{$col}->{$ts};
+            push @record, $value;
+            $skip = 1 unless defined $value;
+            }
+        print join(",", $ts, @record), "\n" unless $skip;
+        }
+    '
+

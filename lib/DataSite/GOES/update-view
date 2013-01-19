@@ -1,0 +1,42 @@
+#!/bin/bash
+
+nexttime_attr=.next-query-time
+
+error() { echo "$*" >&2 exit 1; }
+
+view=$1 && shift
+test -n "$view" || error missing required view argument
+test -d "$view" || error no view object $view
+test -s $view/@viewspec || error view object $view not initialized
+
+# read @viewspec list property, the view interval and columns, into array:
+cols=($(<$view/@viewspec))
+
+# get interval, reduce to seconds:
+# expected format example: interval=900s
+interval=${cols[0]}
+interval=${interval#interval=}
+interval=${interval%s}
+
+# assert: view interval in seconds is set
+
+if test -n "$1"; then # accept time argument in ISO-8601 format
+    time=$1 && shift
+else
+    test -e $view/$nexttime_attr ||
+        error next query time attribute is not set
+    time=$(stat -c +%y $view/$nexttime_attr)
+fi
+
+record=$(tob ${cols[1]}.get --otz +0000 --ots '%Y-%m-%d,%H:%M:%S,' from "$time" to "$time")
+
+n=3
+for col in ${cols[@]:2}; do
+    record=$record,$(tob $col.get -ots '' from "$time" to "$time")
+done
+
+echo $record
+
+# # increment interval seconds from last time:
+# time=$((time+$interval))
+

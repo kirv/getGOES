@@ -1,0 +1,26 @@
+#!/bin/bash
+
+self=.
+tob=/usr/local/bin/tob
+
+error() {
+    echo "$*" >&2
+    exit 1
+    }
+
+## look for first argument: dir=PATH, and use as prefix if found
+unset dir
+test -n "$1" && test ${1%=*} == dir && {
+    dir=${1#*=}
+    shift
+    }
+
+while test -n "$1"; do
+    ob=$1 && shift
+    echo adding object $ob
+    test -n "$dir" && ob=$dir/$ob
+    test -d $ob || error source object $ob not found
+    ln -s $ob .
+    echo ${ob##*/} >> .@order
+done
+

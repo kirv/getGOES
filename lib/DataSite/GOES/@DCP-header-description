@@ -1,0 +1,109 @@
+source: WaterLOG XL-Series_2.14-000.pdf Owner's Manual, Revision: 2.14 - 000
+
+16.11 GOES Downlink Message Header Basics
+
+At times a user must look at the raw data sent from the satellite to see
+if things are working properly. The first part of the message is very
+important to understand as it may help identify problems at a site. Below
+is an actual message sent from a site.
+
+    163708DE08078184903G51+1NN021EUB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+Now lets break this down to understand it better.
+
+The first 8 characters are the site ID or DPC address. They are shown
+in bold below.
+
+    _163708DE_08078184903G51+1NN021EUB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+The next two bytes are the year. In this case the 08 is for 2008.
+
+    163708DE_08_078184903G51+1NN021EUB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+The next 3 bytes are the julian day. In this case 078 and is March 18th,
+on a leap year..
+
+    163708DE08_078_184903G51+1NN021EUB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+The next 6 bytes is the time the transmission was received. This should
+be within the assigned time window. In this transmission it was at 18
+hours, 49 minutes and 03 seconds.
+
+    163708DE08078_184903_G51+1NN021EUB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+The next byte indicates if the transmission was received properly, the
+"G' indicates `Good'.  Other possibilities are `P' for parity errors and
+`?' for unknown errors.
+
+    163708DE08078184903_G_51+1NN021EUB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+the next two bytes show the signal strength of the signal received at
+the satellite. In this case it is 51 which is real good. Numbers in
+the high forties is good, lower forties is fair and if at 35 or less,
+it is surprising the transmission is making it to the satellite.
+
+    163708DE08078184903G_51_+1NN021EUB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+The next two bytes indicate if there is any frequency drift. A plus 0
+is ideal indicating no drift.  In this case the +1 indicates a positive
+drift of 50 Hz from the center frequency. For each count, 1, 2, 3 etc
+it refers to 50 Hz per count of drift. A drift of 1 or 2 positive or
+negative is common.
+
+    163708DE08078184903G51_+1_NN021EUB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+The next two bytes indicate modulation status. The NN indicates normal
+modulation index, and normal modulation quality. The index may also
+report an `H' or `L' for high or low modulation index. The quality may
+also report `F' or `P' for fair or poor quality.
+
+    163708DE08078184903G51+1_NN_021EUB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+The next three bytes are the channel number. In this case 021 is channel
+21. This is an odd number which normally indicates it is transmitting
+to the eastern satellite, (75 Degrees W). Even channel numbers normally
+transmit to the western satellite, (135 Degrees W).
+
+    163708DE08078184903G51+1NN_021_EUB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+The next byte is a letter `E' or `W' indicating the eastern or western
+satellite. In this case the eastern satellite.
+
+    163708DE08078184903G51+1NN021_E_UB00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+The next two bytes are TBD.
+
+    163708DE08078184903G51+1NN021E_UB_00023BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+The next few bytes indicate how many data bytes are going to be
+transmitted. In this case 00023 data bytes.
+
+    163708DE08078184903G51+1NN021EUB_00023_BCT@DZ@DY@Dc@Db@Dm@Dxj
+
+This is the end of the header information added by the GOES
+system. Everything from this point on is from the data logger and is
+normally data. The data could be decoded using the discussion in section
+16.7 above.
+
+Also in this case it is easy to see this is a 100 baud transmission. This
+is possible to see because the data starts immediately after the data
+byte count. A 300 or 1200 baud transmission will have one extra byte in
+the header information. This extra byte is after the byte count and the
+start of data. This extra byte will always be one of four possibilities
+and indicates the type of data and if the unit successfully updated its
+time from a GPS system since the last transmission. The possibilities
+are listed below.
+
+    Character       Comment
+    Space           ASCII Data, No time sync since the last transmission
+    Double quote "  ASCII Data, Time did sync since the last transmission
+    Single Quote `  Binary Data, No time sync since the last transmission
+    Lower Case b    Binary Data, Time did sync since the last transmission
+
+The following is a 300 baud transmission that shows binary data and that
+the unit did sync since the last transmission, notice the lower case
+`b' after the byte count..
+
+    DD9F27E808078225854G38+0NN154WFF00051_b_BCTB1M@EM@EL@EL@EL@EL@EL@
+    EL@EL@T^@T^@T^@T^@EK@D~M
+

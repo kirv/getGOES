@@ -1,0 +1,27 @@
+NAME
+    DataSite/TimeSeries-Virtual-Table
+
+DESCRIPTION
+    This class is an ad hoc 'view' engine to work with timeseries column
+    data.  The parent class is Aggregate, and component column objects will
+    be processed in default order or as set in the .@order property.
+
+METHODS
+    get -- overloads TimeSeries.get, calling it as:
+
+            object.super.get "$@"
+
+        so that all arguments are passed to TimeSeries.get.  This allows 
+        any form of TimeSeries.get queries to be used, but the code assumes
+        that an ISO 8601 timestamp is output.  The timestamp is used as the
+        key to join each record.
+
+        The results are prsented in comma-separated form, with a leading
+        header line.
+
+        
+    init -- initialize the object with symlinks to argument objects, in order
+
+AUTHOR
+    ken.irving@alaska.edu 2010
+
