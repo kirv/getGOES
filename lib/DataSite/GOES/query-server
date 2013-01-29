@@ -3,6 +3,8 @@
 hrs="$1"
 test -n "$hrs" || hrs=1
 
+symvar dcpid || error "${0##*/} FAILED: symvar dcpid"
+
 dcpid=$(<@DCPID)
 
 cd ingest || exit 1

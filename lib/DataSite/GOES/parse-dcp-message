@@ -2,8 +2,6 @@
 use strict;
 use warnings;
 
-my $tob = '/usr/local/bin/tob'; # kludge to hard-code this path?
-
 # read platform ID from @DCPID file:
 my $dcpid;
 open DCPID, '<', '@DCPID' or die $!;
@@ -83,7 +81,7 @@ sub store_dcp_message {
     $target = 'ingest/' . $target;
     open STORE, 
         "| /usr/bin/tee ingest/\@$last_target | " .
-        "$tob $target.store --time $year,$yseconds --encode-newlines --tzofs 0"
+        "tob $target.store --time $year,$yseconds --encode-newlines --tzofs 0"
         or die "failed to open pipe to '$target' timeseries object\n";
 
     print STORE "$iso8601_time\n";

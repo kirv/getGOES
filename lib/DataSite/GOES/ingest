@@ -1,9 +1,5 @@
 #!/bin/sh
 
-tob=/usr/local/bin/tob
-
-self=.
-
 log() {
     unset user
     test -n "$USER" && user="user=$USER"
@@ -11,10 +7,10 @@ log() {
     exit 0
     }
 
-$tob $self.query-server              || log 'query-server failed'
-$tob $self.parse-dcp-message --store || log 'parse-dcp-message failed'
-$tob $self.parse-good-data --store   || log 'parse-good-data failed'
-$tob $self.data.make-view --store    || log 'data-make-view failed'
+tob query-server              || log 'query-server failed'
+tob parse-dcp-message --store || log 'parse-dcp-message failed'
+tob parse-good-data --store   || log 'parse-good-data failed'
+tob data.make-view --store    || log 'data-make-view failed'
 
 log 'success'
 

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 self=.
-tob=/usr/local/bin/tob
 
 # run TimeSeries.get query with given arguments, pipe to perl program
 # results are expected to be applied to one or more column objects, so
