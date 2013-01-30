@@ -1,16 +1,30 @@
-#!/bin/sh
+#!/bin/bash
 
-hrs="$1"
-test -n "$hrs" || hrs=1
+synopsis="${0##*/} [-h] DCPID SERVER CGI-PATH [HOURS]"
 
-symvar dcpid || error "${0##*/} FAILED: symvar dcpid"
+error() { printf "%s\n" "$@" >&2; exit 1; }
 
-dcpid=$(<@DCPID)
+while test "${1:0:1}" = -; do
+    case $1 in
+    -h) printf "synopsis: %s\n" "$synopsis"; exit;;
+    *)  error "unknown option: $1";;
+    esac
+    shift
+done
+
+dcpid=$1 && shift || error "synopsis: $synopsis"
+server=$1 && shift
+cgi_path=$1 && shift
+hours=168
+test -n "$1" && hours=$1 && shift
+
+# simple/crude validation of dcpid value:
+test "${#dcpid}" = 8 || error "invalid DCPID: $dcpid"
 
 cd ingest || exit 1
 
 # prior to May2010:
-# "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hrs"
+# "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hours"
 # 
 # as of 03may2010:
 # "http://lrgseddn3.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=326AF6FE&SINCE=8"
@@ -19,12 +33,8 @@ cd ingest || exit 1
 # DCP Field Test - Low-Bandwidth Message Access:
 #       http://eddn.usgs.gov/fieldtest.html
 
-
-server=lrgseddn3.cr.usgs.gov
-cgi_path=cgi-bin/fieldtest.pl
-
 w3m -dump -cols 10000 \
-    "http://$server/${cgi_path}?DCPID=$dcpid&SINCE=$hrs" |
+    "http://$server/${cgi_path}?DCPID=$dcpid&SINCE=$hours" |
     tee @raw |
     awk "/^$dcpid/{print substr(\$1,1,37)}" > .@_header
 
@@ -36,7 +46,7 @@ cmp .@_header @header > /dev/null 2>&1 && {
 mv .@_header @header
 
 # w3m -dump -cols 10000 \
-#     "http://$server/${cgi_path}?DCPID=$dcpid&SINCE=$hrs" > @raw
+#     "http://$server/${cgi_path}?DCPID=$dcpid&SINCE=$hours" > @raw
 
 # build a descriptor line for heading accumulated raw query results
 
@@ -44,14 +54,13 @@ now=$(date --iso=seconds)
 
 ym=${now%-??T*}
 
-lines=$(wc -l @raw)
-lines=${lines% *}
+lines=$(wc -l<@raw)
 
 unset user &&
     test -n "$USER" &&
         user="user=$USER"
 
-fields=( $now $server $dcpid qryhrs=$hrs lines=$lines $user )
+fields=( $now $server $dcpid qryhrs=$hours lines=$lines $user )
 
 allraw="@$ym-allraw"
 
