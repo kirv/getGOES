@@ -1,27 +1,31 @@
 #!/bin/bash
 
-synopsis="${0##*/} [-h] DCPID SERVER CGI-PATH [HOURS]"
+synopsis="${0##*/} [-h] [--hrs|--hours HOURS] DCPID SERVER CGI-PATH"
 
 error() { printf "%s\n" "$@" >&2; exit 1; }
 
 while test "${1:0:1}" = -; do
     case $1 in
-    -h) printf "synopsis: %s\n" "$synopsis"; exit;;
-    *)  error "unknown option: $1";;
+    -h) printf "SYNOPSIS: %s\n" "$synopsis"; exit;;
+    --hours|--hrs)
+        hours=$2 && shift;;
+    *)  error "UNKNOWN OPTION: $1";;
     esac
     shift
 done
 
-dcpid=$1 && shift || error "synopsis: $synopsis"
+test $# -ge 3 || error "SYNOPSIS: $synopsis"
+
+dcpid=$1 && shift
+test "${#dcpid}" = 8 || error "INVALID DCPID: $dcpid"
+
 server=$1 && shift
 cgi_path=$1 && shift
-hours=168
-test -n "$1" && hours=$1 && shift
 
-# simple/crude validation of dcpid value:
-test "${#dcpid}" = 8 || error "invalid DCPID: $dcpid"
+cd ingest || error "NO ingest/ DIRECTORY FOUND IN $PWD"
 
-cd ingest || exit 1
+test -n "$hours" || hours=$(( ( $(date +%s)-$(stat -c %Y @header))/3600)) ||
+    error "FAILED to get hours since @header was last written"
 
 # prior to May2010:
 # "http://lrgseddn1.cr.usgs.gov/cgi-bin/fieldtest.pl?DCPID=$dcpid&SINCE=$hours"
@@ -38,10 +42,7 @@ w3m -dump -cols 10000 \
     tee @raw |
     awk "/^$dcpid/{print substr(\$1,1,37)}" > .@_header
 
-cmp .@_header @header > /dev/null 2>&1 && {
-    echo duplicate DCP header >&2
-    exit 1
-    }
+cmp .@_header @header > /dev/null 2>&1 && error "DUPLICATE DCP HEADER"
 
 mv .@_header @header
 
