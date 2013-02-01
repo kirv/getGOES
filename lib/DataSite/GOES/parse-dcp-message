@@ -2,40 +2,40 @@
 use strict;
 use warnings;
 
-# read platform ID from @DCPID file:
-my $dcpid;
-open DCPID, '<', '@DCPID' or die $!;
-chomp( $dcpid = <DCPID> );
-close DCPID or die $!;
+(my $program) = $0 =~ m/.*\/(.+)/;
+my $synopsis = "$program [-h] [--help] [--test] [--source=SOURCE] DCPID";
 
-die "invalid platform id: $dcpid\n"
-    unless $dcpid =~ m/^[0-9A-Fa-f]{8}$/;
+my $store_to_objects = 1;
 
-my $source = 'ingest/@raw'; # default source for data 
-my $store_to_objects;
-
-while ( my $arg = shift ) {
-    if ( $arg eq '--store' ) {
-        $store_to_objects = 1;
+while ( $ARGV[0] && $ARGV[0] =~ m/^-/ ) {
+    my $arg = shift;
+    if ( $arg =~ m/--source=(.*)/ ) {
+        $source = $1;
+        }
+    elsif ( $arg eq '--test' ) {
+        $store_to_objects = 0;
+        }
+    elsif ( $arg eq '-h' ) {
+        print "SYNOPSIS: $synopsis\n";
+        exit 0;
         }
     elsif ( $arg eq '--help' ) {
         exec "pod2text $0";
         }
-    elsif ( $arg eq '-' ) {
-        $source = '-';
-        }
-    elsif ( $arg =~ m/^-/ ) {
-        die "unknown option: $arg\n";
-        }
     else {
-        $source = $arg;
+        die "UNKNOWN OPTION: $arg\nSYNOPSIS: $synopsis\n";
         }
     }
 
 unless ( $source eq '-' ) {
     open STDIN, '<', $source
-        or die "unable to open $source file in object\n";
+        or die "UNABLE TO OPEN FILE $source\n";
     }
+
+# platform ID is a required argument:
+my $dcpid = shift;
+die "MISSING REQUIRED DCPID ARGUMENT\nSYNOPSIS: $synopsis\n" unless $dcpid;
+die "INVALID PLATFORM ID: $dcpid\n" unless $dcpid =~ m/^[0-9A-Fa-f]{8}$/;
 
 my (@header, $id, $len, $data, $iso8601_time, $year, $yseconds);
 while ( <> ) {
@@ -130,11 +130,11 @@ sub parse_header {
 
 =head1 NAME
 
-GOES.parse-dcp-message -- print DCP message(s) to stdout
+GOES.parse-dcp-message -- print DCP message(s) to stdout or store
 
 =head1 SYNOPSIS
 
-    parse-dcp-message [--store] [--help] [SOURCE]
+    parse-dcp-message [--store] [--help] DCPID [SOURCE]
 
 =head1 DESCRIPTION
 
