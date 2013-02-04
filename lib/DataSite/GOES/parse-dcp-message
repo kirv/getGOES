@@ -3,17 +3,21 @@ use strict;
 use warnings;
 
 (my $program) = $0 =~ m/.*\/(.+)/;
-my $synopsis = "$program [-h] [--help] [--test] [--source=SOURCE] DCPID";
+my $synopsis = "$program [-h] [--help] [--test] [--source[ |=]SOURCE] DCPID";
 
-my $store_to_objects = 1;
+# read from stdin by default:
+my $source = '-';
 
 while ( $ARGV[0] && $ARGV[0] =~ m/^-/ ) {
     my $arg = shift;
-    if ( $arg =~ m/--source=(.*)/ ) {
+    if ( $arg eq '--source' ) {
+        $source = shift;
+        }
+    elsif ( $arg =~ m/--source=(.*)/ ) {
         $source = $1;
         }
     elsif ( $arg eq '--test' ) {
-        $store_to_objects = 0;
+        $ENV{TESTING}=1;
         }
     elsif ( $arg eq '-h' ) {
         print "SYNOPSIS: $synopsis\n";
@@ -36,6 +40,8 @@ unless ( $source eq '-' ) {
 my $dcpid = shift;
 die "MISSING REQUIRED DCPID ARGUMENT\nSYNOPSIS: $synopsis\n" unless $dcpid;
 die "INVALID PLATFORM ID: $dcpid\n" unless $dcpid =~ m/^[0-9A-Fa-f]{8}$/;
+
+die "TESTING=$ENV{TESTING}\nDCPID=$dcpid\nSOURCE=$source\n";
 
 my (@header, $id, $len, $data, $iso8601_time, $year, $yseconds);
 while ( <> ) {
@@ -62,7 +68,7 @@ print_output()
 # functions follow
 
 sub print_output {
-    return store_dcp_message() if $store_to_objects;
+    return store_dcp_message() unless $ENV{TESTING};
     print "$iso8601_time\n";
     print "@header\n";
     print substr($data,0,$len), "\n";

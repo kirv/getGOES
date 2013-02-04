@@ -1,14 +1,18 @@
 #!/bin/bash
 
-synopsis="${0##*/} [-h] [--hrs|--hours HOURS] DCPID SERVER CGI-PATH"
+synopsis="${0##*/} [-h] [--test] [--hours HOURS] DCPID SERVER CGI"
 
 error() { printf "%s\n" "$@" >&2; exit 1; }
 
 while test "${1:0:1}" = -; do
     case $1 in
     -h) printf "SYNOPSIS: %s\n" "$synopsis"; exit;;
-    --hours|--hrs)
+    --test)
+        TESTING=1;;
+    --hours)
         hours=$2 && shift;;
+    --hours=*)
+        hours=${1#*=};;
     *)  error "UNKNOWN OPTION: $1";;
     esac
     shift
@@ -36,6 +40,12 @@ test -n "$hours" || hours=$(( ( $(date +%s)-$(stat -c %Y @header))/3600)) ||
 # EDDN home page: http://eddn.usgs.gov/
 # DCP Field Test - Low-Bandwidth Message Access:
 #       http://eddn.usgs.gov/fieldtest.html
+
+test -n "$TESTING" && {
+    w3m -dump -cols 10000 \
+        "http://$server/${cgi_path}?DCPID=$dcpid&SINCE=$hours" 
+    exit
+    }
 
 w3m -dump -cols 10000 \
     "http://$server/${cgi_path}?DCPID=$dcpid&SINCE=$hours" |
