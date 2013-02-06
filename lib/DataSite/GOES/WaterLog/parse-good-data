@@ -2,20 +2,41 @@
 use strict;
 use warnings;
 
-my $store_to_objects;
-while ( my $opt = shift ) {
-    if ( $opt eq '--store' ) {
-        $store_to_objects = 1;
+(my $program) = $0 =~ m/.*\/(.+)/;
+my $synopsis = "$program [-h] [--help] [--test] [--source[ |=]SOURCE]";
+
+my $source = '-';
+
+while ( $ARGV[0] && $ARGV[0] =~ m/^-/ ) {
+    my $arg = shift;
+    if ( $arg eq '--source' ) {
+        $source = shift;
+        }
+    elsif ( $arg =~ m/--source=(.*)/ ) {
+        $source = $1;
+        }
+    elsif ( $arg eq '--test' ) {
+        $ENV{TESTING}=1;
+        }
+    elsif ( $arg eq '-h' ) {
+        print "SYNOPSIS: $synopsis\n";
+        exit 0;
+        }
+    elsif ( $arg eq '--help' ) {
+        exec "pod2text $0";
         }
     else {
-        die "unknown argument: $opt\n";
+        die "UNKNOWN OPTION: $arg\nSYNOPSIS: $synopsis\n";
         }
     }
 
-open STDIN, '<', "ingest/\@good" or die $!;
+unless ( $source eq '-' ) {
+    open STDIN, '<', $source
+        or die "UNABLE TO OPEN FILE $source\n";
+    }
 
 my $timestamp = <>;
-# print $timestamp;
+# print "DEBUG timestamp: $timestamp\n";
 
 <>; # discard dcp header fields
 
@@ -80,7 +101,7 @@ my $good = 0;
 my $fail = 0;
 foreach my $command ( @tob_new_commands ) {
     print "$command\n";
-    next unless $store_to_objects;
+    next if $ENV{TESTING};
     if ( system("$command") == 0 ) { 
         $good += 1;
         }
@@ -88,5 +109,25 @@ foreach my $command ( @tob_new_commands ) {
         $fail += 1;
         }
     }
+
+=pod
+
+=head1 NAME
+
+GOES.WaterLog.parse-good-data -- parse data fields from GOES DCP message
+
+=head1 SYNOPSIS
+
+parse-good-data [-h] [--help] [--test] [--source SOURCE]
+
+=head1 DESCRIPTION
+
+Read GOES-formatted data record originating from a specific datalogger
+platform, separate it into fields, prepare commands to store data into 
+corresponding field objects, and run those commands.
+
+=head1 AUTHOR
+
+Ken.Irving@alaska.edu, 2013
 
 

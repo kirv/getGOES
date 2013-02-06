@@ -41,8 +41,6 @@ my $dcpid = shift;
 die "MISSING REQUIRED DCPID ARGUMENT\nSYNOPSIS: $synopsis\n" unless $dcpid;
 die "INVALID PLATFORM ID: $dcpid\n" unless $dcpid =~ m/^[0-9A-Fa-f]{8}$/;
 
-die "TESTING=$ENV{TESTING}\nDCPID=$dcpid\nSOURCE=$source\n";
-
 my (@header, $id, $len, $data, $iso8601_time, $year, $yseconds);
 while ( <> ) {
     chomp;
@@ -85,6 +83,7 @@ sub store_dcp_message {
     $target = 'parity' if $status_code eq '?';
     my $last_target = $target;
     $target = 'ingest/' . $target;
+  # die "status=$status_code: $target\n";
     open STORE, 
         "| /usr/bin/tee ingest/\@$last_target | " .
         "tob $target.store --time $year,$yseconds --encode-newlines --tzofs 0"
