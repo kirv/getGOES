@@ -3,14 +3,15 @@
 log() {
     unset user
     test -n "$USER" && user="user=$USER"
-    $tob ingest/log.store "$*" $user
+    tob ingest.log.store "$*" $user
+    test -n "$USER" && printf "%s\n" "$@"
     exit 0
     }
 
-tob query-server              || log 'query-server failed'
-tob parse-dcp-message --store || log 'parse-dcp-message failed'
-tob parse-good-data --store   || log 'parse-good-data failed'
-tob data.make-view --store    || log 'data-make-view failed'
+tob query-server        || log 'query-server failed'
+tob parse-dcp-message   || log 'parse-dcp-message failed'
+tob parse-good-data     || log 'parse-good-data failed'
+tob data.make-view      || log 'data-make-view failed'
 
 log 'success'
 
