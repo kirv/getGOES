@@ -1,0 +1,106 @@
+#!/bin/bash
+
+error() { echo "$*" >&2; exit 1; }
+
+symvar() {
+    name=$1
+    test -L $name || return
+    test -e $name && return
+    value=$(readlink $name)
+    test "${value:0:1}" = = || error "$name is not a valid symvar, lacks '=' prefix on value $value"
+    value=${value:1}
+    }
+
+set_symvar() {
+    name=$1
+    value=$2
+    ln -sf ="$value" $name || return
+    }
+
+# parse options:
+while test "${1:0:1}" == - ; do
+    opt=$1 && shift
+    case $opt in
+    -v|--verbose)   VERBOSE=1;;
+    *)  error unknown option: $opt
+    esac
+done
+
+test -d monthly || exit 15
+
+tables=(odm-raw-stage odm-raw-hourly odm-raw-all)
+
+for table in "${tables[@]}"; do 
+
+    table=monthly/$table
+    echo $table && continue
+
+## NOTES changing this to NOT cd into the directory, but instead work with $table
+## as a prefix to commands  --- NOT DONE
+
+    cd /var/local/data/blm/$site/$table || error site $site/$table not found
+    test -n "$VERBOSE" && echo updating $site/$table 
+
+    symvar last-time-UTC || error last update time not stored for $site/$table
+    last_time=$value
+
+    $tob /home/site.blm.$site.view.$table.get --otz +0000 --ots '"%Y-%m-%d %H:%M:%S"%t' from "$last-time +1 minute" > .\@new-data
+    continue
+    test $(wc -l < .\@new-data) -gt 1 || {
+        rm .\@new-data
+        test -n "$VERBOSE" && echo no new data 
+        continue
+        }
+    # ASSERT: there's new data to be processed
+    mv -f .\@new-data \@new-data
+
+    test -n "$VERBOSE" && {
+        count=$(wc -l < \@new-data)
+        count=$((count-1))
+        echo $count new records
+        }
+    
+    # split data by month, store in file, e.g., "@2010-01-UTC"
+    awk -F, '
+        NR == 1 {
+	    header = $0
+            next
+            }
+	    $1 ~ /^\"2/ {
+            ts = $1
+            gsub(/\"/, "", ts)
+            split(ts, date, /-/)
+            month = sprintf("%s-%s", date[1], date[2])
+            if ( month != last_month ) {
+                ofile = sprintf("@%s-UTC", month)
+		        last_month = month
+                if (system("test -e " ofile) == 0) {
+                    # monthly output file exists
+                    # check header to make sure it is identical to new data:
+                    getline stored_header < ofile
+                    if (header != stored_header)
+                        error "header mismatch between @new-data and " ofile
+                    # ASSERT: header lines match, so ok to append to ofile
+                    }
+                else {
+                    # create new monthly output file
+                    print header > ofile
+                    }
+              # printf("\twriting @%s...\n", month)
+                } 
+            print $0 >> ofile
+            }
+        ' < \@new-data
+
+    last_time=$(tail -n 1 \@new-data | awk -F, '{gsub(/\"/,"",$1); print $1}')+0000
+    echo $last_time > \@last-time-UTC
+    touch -d "$last_time" \@last-time-UTC
+    test -n "$VERBOSE" && echo last timestamp: $last_time
+
+    # set a symlink to the last or 'current' output file:
+    current=$(ls \@2* | sort | tail -n 1)
+    # force-set symlink only if it does not exist:
+    test $current -ef \@current || ln -sf $current \@current
+
+done
+

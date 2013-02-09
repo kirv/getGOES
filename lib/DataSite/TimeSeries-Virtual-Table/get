@@ -1,6 +1,9 @@
 #!/bin/bash
 
-self=.
+# DataSite/TimeSeries-Virtual-Table.get-table runs in the context of an Aggregate object, and
+# causes the TimeSeries.get method to be called with the same arguments on each contained object
+# turn.  The results are as shown below, lists of column data, then this method recombines those
+# results into records where the timestamps match.
 
 # run TimeSeries.get query with given arguments, pipe to perl program
 # results are expected to be applied to one or more column objects, so
@@ -20,7 +23,9 @@ self=.
 #
 # NOTE: timestamp is assumed to be tab-terminated.
 
-$tob $self.super.get "$@" | /usr/bin/perl -wne '
+# calling TimeSeries.get via the Aggregate.do method:
+
+tob do --format "\n%s.%s %s\n" get "$@" | /usr/bin/perl -we '
     my $col;
     my @col_order;
     my @ts_order;
