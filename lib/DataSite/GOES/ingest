@@ -8,10 +8,10 @@ log() {
     exit 0
     }
 
-tob query-server        || log 'query-server failed'
-tob parse-dcp-message   || log 'parse-dcp-message failed'
-tob parse-good-data     || log 'parse-good-data failed'
-tob data.make-view      || log 'data-make-view failed'
+tob query-server                || log 'query-server failed'
+tob parse-dcp-message           || log 'parse-dcp-message failed'
+tob parse-good-data             || log 'parse-good-data failed'
+tob update-monthly-data-files   || log 'update-monthly-data-files failed'
 
 log 'success'
 
