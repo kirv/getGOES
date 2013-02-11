@@ -1,0 +1,181 @@
+#!/bin/bash
+
+synopsis="${0##*/} [-h] [--test] [--source PATH] "
+
+error() { printf "%s\n" "$@" >&2; exit 1; }
+
+symvar() {
+    name=$1
+    test -L $name || return
+    test -e $name && return
+    value=$(readlink $name)
+    test "${value:0:1}" = = || error "$name is not a valid symvar, lacks '=' prefix on value $value"
+    value=${value:1}
+    }
+
+set_symvar() {
+    name=$1
+    value=$2
+    ln -sf ="$value" $name || return
+    }
+
+while test "${1:0:1}" = -; do
+    case $1 in
+    -h) printf "SYNOPSIS: %s\n" "$synopsis"; exit;;
+    --test)         TESTING=1;;
+    -v|--verbose)   VERBOSE=1;;
+    *)  error "UNKNOWN OPTION: $1";;
+    esac
+    shift
+done
+
+symvar last-time-UTC || error last update time not stored for $site/$table
+last_time=$value
+
+tob source-table.get \
+    --otz +0000 \
+    --ots '"%Y-%m-%d %H:%M:%S"%t' \
+    from "$last_time +1 minute" \
+    > .\@new-data
+
+test $(wc -l < .\@new-data) -gt 1 || {
+    rm .\@new-data
+    test -n "$VERBOSE" && echo no new data 
+    exit
+    }
+# ASSERT: there's new data to be processed
+mv -f .\@new-data \@new-data
+
+test -n "$VERBOSE" && 
+    echo $(( $(wc -l < @new-data) -1 )) new records
+    
+
+# split data by month, store in file, e.g., "@2010-01-UTC"
+awk -F, '
+    NR == 1 {
+        header = $0
+        next
+        }
+    $1 ~ /^\"2/ {
+        ts = $1
+        gsub(/\"/, "", ts)
+        split(ts, date, /-/)
+        month = sprintf("%s-%s", date[1], date[2])
+        if ( month != last_month ) {
+            ofile = sprintf("@%s-UTC", month)
+            last_month = month
+            if (system("test -e " ofile) == 0) {
+                # monthly output file exists
+                # check header to make sure it is identical to new data:
+                getline stored_header < ofile
+                if (header != stored_header)
+                    error "header mismatch between @new-data and " ofile
+                # ASSERT: header lines match, so ok to append to ofile
+                }
+            else {
+                # create new monthly output file
+                print header > ofile
+                }
+          # printf("\twriting @%s...\n", month)
+            } 
+        print $0 >> ofile
+        }
+    ' < \@new-data
+
+last_time=$(tail -n 1 \@new-data | awk -F, '{gsub(/\"/,"",$1); print $1}')+0000
+set_symvar last-time-UTC "$last_time"
+
+test -n "$VERBOSE" && echo last timestamp: $last_time
+
+# set a symlink to the last or 'current' output file:
+current=$(ls \@2* | sort | tail -n 1)
+# force-set symlink only if it does not exist:
+test $current -ef \@current || ln -sf $current \@current
+
+
+exit
+NAME
+    DataSite/TableFiles-From-Query.update-files -- query source, store results
+
+DESCRIPTION
+
+DISCUSSION
+    This object type started as a script to store data files obtained
+    by querying a 'virtual table' using thinobject TimeSeries database.
+    
+    It ought to be replaced by a query system that can provide the data
+    files on demand, but it's needed now to support upstream expectations.
+
+    The upstream system prefers to access data files vs running a query,
+    so a script was developed:
+    
+        /var/local/data/blm/.bin/update-data-files
+
+    It was written to store files under site objects, e.g.,
+    
+        /var/local/data/blm/ikpikpuk/
+            odm-raw-all/
+            odm-raw-hourly/
+                @2012-12-UTC
+                @2013-01-UTC
+                @current -> @2013-01-UTC
+
+    The source objects are virtual tables configured as views in the
+    site objects configured for ingesting data:
+
+        /home/site/blm/ikpikpuk/
+            view/
+                odm-raw-hourly/ ^ -> DataSite/TimeSeries-Virtual-Table
+                    VB -> ../../raw/VB/
+                    us -> ../../raw/us/
+                    ud -> ../../raw/ud/
+                    tw -> ../../raw/tw/
+                    ta -> ../../raw/ta/
+                    t2 -> ../../raw/t2/
+                    pc -> ../../raw/pc/
+
+    In turn, the links point to TimeSeries column objects, and the
+    virtual table is constructed from them.
+
+    Apparently there's no @order list, so I suppose the column order
+    is whatever it happened to be.  On each write a check is made to 
+    ensure that the columns are in the same order throughout the file.
+
+    I've symlinked from /var/local/data into each site, e.g.,
+    
+        /home/site/blm/ikpikpuk/
+            monthly -> /var/local/data/blm/ikpikpuk/
+
+    But look at it as if it's local:
+
+        /home/site/blm/ikpikpuk/
+            monthly/
+                odm-raw-hourly/ ^ -> DataSite/TableFiles-From-Query
+                    source -> /home/site/blm/ikpikpuk/view/odm-raw-hourly
+                    last-time-UTC -> =2013-01-19 18:00:00+0000
+
+                    @2013-01-UTC
+                    @current -> @2013-01-UTC
+                    @new-data
+
+    The source link has to be absolute if the directory is symlinked.
+
+    This method is tasked with making the query on source and handling
+    the results.
+
+
+
+OPTIONS
+    --test
+        set variable TESTING to avoid writing to files
+    -h
+        show synopsis
+    --help
+        show this manpage
+    -v
+    --verbose
+        emit some noise about what's going on
+    
+AUTHOR    
+    Ken.Irving@alaska.edu 2013
+

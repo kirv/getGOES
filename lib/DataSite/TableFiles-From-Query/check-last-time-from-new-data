@@ -1,0 +1,31 @@
+#!/bin/bash
+
+get_symvar() {
+    name=$1
+    test -L $name || return
+    test -e $name && return
+    value=$(readlink $name)
+    test "${value:0:1}" = = || error "$name is not a valid symvar, lacks '=' prefix on value $value"
+    value=${value:1}
+    }
+
+set_symvar() {
+    name=$1
+    value=$2
+    ln -sf ="$value" $name || return
+    }
+
+last_time=$(tail -n 1 \@new-data | awk -F, '{gsub(/\"/,"",$1); print $1}')+0000
+get_symvar last-time-UTC
+
+test "$last_time" = "$value" && {
+    echo "ok, both are set to:     $last_time"
+    exit
+    }
+
+echo "last time in @new-data:  $last_time"
+echo "last-time-UTC attribute: $value"
+
+test "$1" = --set || exit 1
+
+set_symvar last-time-UTC "$last_time"
