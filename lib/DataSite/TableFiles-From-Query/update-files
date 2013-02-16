@@ -49,7 +49,6 @@ mv -f .\@new-data \@new-data
 test -n "$VERBOSE" && 
     echo $(( $(wc -l < @new-data) -1 )) new records
     
-
 # split data by month, store in file, e.g., "@2010-01-UTC"
 awk -F, '
     NR == 1 {
@@ -90,10 +89,10 @@ test -n "$VERBOSE" && echo last timestamp: $last_time
 # set a symlink to the last or 'current' output file:
 current=$(ls \@2* | sort | tail -n 1)
 # force-set symlink only if it does not exist:
+#   (note that test Z -ef L compares Z to the referent of L, so this works...)
 test $current -ef \@current || ln -sf $current \@current
 
-
-exit
+exit 0
 NAME
     DataSite/TableFiles-From-Query.update-files -- query source, store results
 
